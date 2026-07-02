@@ -75,10 +75,36 @@ position startpos moves e2e4 e7e5
 go movetime 2000
 ```
 
-## Reproduce the training
+## Training your own model
 
-The full loop - build -> self-play -> extract features -> train -> quantize ->
-recompile - is scripted and documented in
+You do not need to train anything to play (the engine ships with trained weights).
+But if you want to train a fresh model, two commands do it:
+
+```bash
+# 1. self-play that dumps 200-feature positions, labelled by the NNUE teacher
+uv run python pipeline/generate_data.py --engine kaggle-stockfish/stockfish_gen.exe --games 500 --depth 12
+
+# 2. train the AUNN + quantize -> your own params.h
+uv run python pipeline/train.py --features kaggle-stockfish/src/features --epochs 300 --out my_params.h
+```
+
+Step 1 self-plays and writes `.features` files; step 2 trains the small network and
+quantizes it to `my_params.h` (use more games/epochs for real strength - the
+reference trained on millions of positions).
+
+**Deploying it - the honest caveat.** `my_params.h` is 16-wide, matching the
+reference's earlier training notebook (`reference/kaggle_solution/...065d`). The
+public engine branches at that width (`main`, `tmp`) are unfinished dev snapshots
+that play badly even with the NNUE teacher, and the strong shipped engine
+(`nn-last-spurt`) uses a wider network whose training notebook the author never
+published. So the two commands produce a genuine trained model file, but turning
+it into a *strong* self-trained C++ binary needs materials that are not public.
+The engine you already built (`stockfish_play.exe`) uses the author's own trained
+weights and is the one to play with.
+
+Clang (installed at `C:\llvm-mingw`) can build the 16-wide branches for
+experimentation - `COMP=clang BRANCH=main bash pipeline/setup_engine.sh` - which
+GCC 16 cannot. The full loop is documented in
 [pipeline/README.md](pipeline/README.md).
 
 ## Tests

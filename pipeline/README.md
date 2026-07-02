@@ -48,13 +48,18 @@ default). So:
 
 - Building `nn-last-spurt` (32-wide) and playing with its committed `params.h`:
   **works, strong** - this is the replicated original engine.
-- Retraining end-to-end with 065d (16-wide) matches the `main` branch. `main`'s
-  older SIMD code trips strict GCC 16 (`__m256`/`__m256i`); build it with clang or
-  an older GCC, or use the 32-wide training notebook (066+, not in the provided
-  set) to retrain `nn-last-spurt`.
+- Retraining with 065d (16-wide) produces a valid `params.h` **but there is no
+  working public engine to deploy it into.** The 16-wide branches that match the
+  notebook (`main`, `tmp`) are unfinished dev snapshots: they compile with clang
+  (GCC 16 rejects their `__m256`/`__m256i` code) but play badly even with the NNUE
+  teacher (e.g. they hang a free queen). The strong `nn-last-spurt` engine uses a
+  structurally different, wider network whose training notebook (066+) the author
+  never published.
 
-The `train.py` demo runs at tiny scale (a few thousand positions, few epochs) and
-so yields weak weights; the reference used tens of millions of positions.
+So the training loop runs and yields a real model file, but a strong self-trained
+C++ binary is not reachable from the public materials. The `train.py` demo also
+runs at tiny scale (a few thousand positions, few epochs); the reference trained
+on tens of millions of positions.
 
 ## Custom UCI
 
