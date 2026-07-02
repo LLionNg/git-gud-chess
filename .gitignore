@@ -1,0 +1,24 @@
+.venv
+.winenv
+.linuxenv
+.ENV
+ENV
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Trained weights and training data (phase 2 outputs)
+*.npz
+*.pth
+*.bin
+data/
+weights/
+
+# Reference Kaggle notebooks: large (~250 MB, embedded outputs), kept locally
+# only. Notebook-dependent tests skip when these are absent.
+reference/kaggle_solution/*.ipynb

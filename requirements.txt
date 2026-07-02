@@ -1,0 +1,5 @@
+# Runtime dependencies for the chessbot engine.
+# Training-only extras (torch, tqdm) live in pyproject.toml's [train] group.
+python-chess>=1.11
+pydantic>=2.6
+numpy>=1.26

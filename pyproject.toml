@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chessbot"
+version = "0.1.0"
+description = "A clean, UCI-compatible chess engine reconstructing the method of Lgeu's top-3 FIDE & Google Efficient Chess AI Challenge solution."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "chessbot" }]
+dependencies = [
+    "python-chess>=1.11",
+    "pydantic>=2.6",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+train = ["torch>=2.0", "tqdm>=4.66"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+chessbot = "chessbot.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["chessbot*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
