@@ -61,3 +61,20 @@ so yields weak weights; the reference used tens of millions of positions.
 This fork shortens UCI to save bytes: use `po fen <FEN>` / `po startpos moves ...`
 (not `position`) and `go depth N` / `go wtm <ms> btm <ms>` (not `wtime`). Set
 `setoption name Use NNUE value false` to evaluate with the trained AUNN.
+
+For a standard-UCI frontend (any GUI), run `python -m chessbot.native`, which
+translates to this dialect and drives the built engine.
+
+## The 64 KiB "efficient" submission
+
+The competition capped submissions at 64 KiB. Because the engine evaluates with
+the AUNN (not NNUE), the 40 MB net is dropped via `CXXFLAGS=-DMINIMIZE`, giving a
+tiny binary. Reproduced here it compiles to **346 KB stripped / 149 KB gzip**;
+the reference reached ~58 KB with UPX (LZMA).
+
+Platform note: the `MINIMIZE` build was only ever built/run on **Linux + clang**.
+Under **Windows + MinGW GCC 16** it compiles (after two portability fixes:
+`win_compat.h` outside the `MINIMIZE` guard, and an `<iostream>`→`fprintf` swap in
+`misc.cpp`) but **segfaults at runtime**. A working 64 KiB submission therefore
+needs the reference's Linux/clang environment (e.g. WSL) plus UPX. The full-size
+playing engine (`stockfish_play.exe`) is unaffected and is the one to use.

@@ -17,8 +17,8 @@ cd "$FORK_DIR/src"
 
 # 2. Windows portability shim (POSIX flockfile -> CRT _lock_file), used by two files.
 cp "../../pipeline/win_compat.h" win_compat.h
-grep -q win_compat.h bitboard.cpp || sed -i '/#include <cassert>/a \\n#include "win_compat.h"' bitboard.cpp
-grep -q win_compat.h search.cpp   || sed -i '/#include "nnue\/evaluate_nnue.h"/a \\n#include "win_compat.h"' search.cpp
+grep -q win_compat.h bitboard.cpp || sed -i '/#include <cassert>/a #include "win_compat.h"' bitboard.cpp
+grep -q win_compat.h search.cpp   || sed -i '/#include "uci.h"/a #include "win_compat.h"' search.cpp
 
 # 3. Fetch the NNUE net (embedded via incbin at compile time; the GitHub mirror is fast).
 [ -f "$NET" ] || curl -skL -o "$NET" "https://github.com/official-stockfish/networks/raw/master/$NET"
