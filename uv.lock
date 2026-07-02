@@ -34,15 +34,13 @@ dependencies = [
     { name = "python-chess" },
 ]
 
-[package.optional-dependencies]
-train = [
-    { name = "torch" },
-    { name = "tqdm" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+]
+train = [
+    { name = "torch" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -50,13 +48,14 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "python-chess", specifier = ">=1.11" },
-    { name = "torch", marker = "extra == 'train'", specifier = ">=2.0" },
-    { name = "tqdm", marker = "extra == 'train'", specifier = ">=4.66" },
 ]
-provides-extras = ["train"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8.0" }]
+train = [
+    { name = "torch", specifier = ">=2.0" },
+    { name = "tqdm", specifier = ">=4.66" },
+]
 
 [[package]]
 name = "colorama"

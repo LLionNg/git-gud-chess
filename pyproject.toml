@@ -16,13 +16,16 @@ dependencies = [
     "numpy>=1.26",
 ]
 
-[project.optional-dependencies]
-train = ["torch>=2.0", "tqdm>=4.66"]
-
-# Dev tools (PEP 735 group); `uv sync` installs these by default, so `uv run
-# pytest` works with no extra flags.
+# PEP 735 dependency groups. `uv sync` installs the groups listed in
+# tool.uv.default-groups below, so a single `uv sync` gives you pytest AND the
+# training deps (torch/tqdm) -- `uv run pytest` and `uv run python pipeline/train.py`
+# then work with no extra flags.
 [dependency-groups]
 dev = ["pytest>=8.0"]
+train = ["torch>=2.0", "tqdm>=4.66"]
+
+[tool.uv]
+default-groups = ["dev", "train"]
 
 [project.scripts]
 chessbot = "chessbot.__main__:main"

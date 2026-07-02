@@ -78,7 +78,8 @@ go movetime 2000
 ## Training your own model
 
 You do not need to train anything to play (the engine ships with trained weights).
-But if you want to train a fresh model, two commands do it:
+But if you want to train a fresh model, run `uv sync` once (it installs the
+training deps, including torch), then two commands do it:
 
 ```bash
 # 1. self-play that dumps 200-feature positions, labelled by the NNUE teacher
