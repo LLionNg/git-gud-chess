@@ -53,12 +53,21 @@ with standard UCI, using the trained neural evaluation.
 
 ### 2. The Python re-implementation
 
+With [uv](https://docs.astral.sh/uv/) (creates the environment for you):
+
 ```bash
-pip install -r requirements.txt
-python -m chessbot                # standard UCI, pure Python (~8k nodes/sec)
+uv run python -m chessbot         # standard UCI, pure Python (~8k nodes/sec)
 ```
 
-Point a GUI at `python -m chessbot`, or type UCI commands directly:
+Or with pip:
+
+```bash
+pip install -r requirements.txt
+python -m chessbot
+```
+
+Point a GUI at `uv run python -m chessbot` (or `python -m chessbot`), or type UCI
+commands directly:
 
 ```
 uci
@@ -75,8 +84,10 @@ recompile - is scripted and documented in
 ## Tests
 
 ```bash
-python -m pytest      # perft, evaluation, mates, tactics, UCI, and the native bridge
+uv run pytest         # or: python -m pytest
 ```
+
+Covers perft, evaluation, mates, tactics, UCI, and the native bridge.
 
 ## Layout
 

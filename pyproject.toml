@@ -18,6 +18,10 @@ dependencies = [
 
 [project.optional-dependencies]
 train = ["torch>=2.0", "tqdm>=4.66"]
+
+# Dev tools (PEP 735 group); `uv sync` installs these by default, so `uv run
+# pytest` works with no extra flags.
+[dependency-groups]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
