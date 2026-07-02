@@ -22,3 +22,8 @@ weights/
 # Reference Kaggle notebooks: large (~250 MB, embedded outputs), kept locally
 # only. Notebook-dependent tests skip when these are absent.
 reference/kaggle_solution/*.ipynb
+
+# Pipeline run logs and generated features
+pipeline/*.log
+features/
+*.features
