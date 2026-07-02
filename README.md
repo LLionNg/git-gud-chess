@@ -114,6 +114,22 @@ result = engine.search(SearchLimits(movetime_ms=2000))
 print(result.best_move, result.score, result.pv)
 ```
 
+**Native backend — the replicated original engine (much faster):**
+
+The reference solution's C++ engine (Lgeu's now-public Stockfish fork) can be
+built locally and driven through a standard-UCI bridge, so any GUI can use it:
+
+```bash
+export PATH="/c/mingw64/bin:$PATH"     # a MinGW-w64 GCC
+bash pipeline/setup_engine.sh          # clone + build the fork (~1 min)
+python -m chessbot.native              # standard UCI -> fast native engine (~780k nps)
+```
+
+`chessbot.native` translates standard UCI to the fork's shortened dialect and
+selects its trained AUNN evaluation. See [pipeline/README.md](pipeline/README.md)
+for the full reproduction of the original method (build → self-play → train →
+quantize → recompile).
+
 ### UCI options
 
 | Option | Default | Meaning |
