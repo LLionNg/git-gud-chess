@@ -28,7 +28,7 @@ def test_finds_forced_mate(searcher, fen: str, moves: int, depth: int) -> None:
 
 
 TACTICS = [
-    # (fen, expected best move, minimum score) — a clearly winning capture.
+    # (fen, expected best move, minimum score) - a clearly winning capture.
     ("4k3/8/8/8/8/3q4/8/3RK3 w - - 0 1", "d1d3", 450),   # Rxd3 wins Q for R (up a rook)
     ("4k3/8/8/8/3n4/8/8/3QK3 w - - 0 1", "d1d4", 250),   # Qxd4 wins the knight
 ]

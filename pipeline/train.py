@@ -1,4 +1,4 @@
-"""Train the AUNN on generated features and emit params.h — the reference loop.
+"""Train the AUNN on generated features and emit params.h - the reference loop.
 
 Faithful to notebook 065d: loads the ``*.features`` files the datagen engine
 wrote, targets ``nnue_raw_value - winnable`` (the NNUE teacher minus the winnable

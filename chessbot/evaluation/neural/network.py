@@ -5,7 +5,7 @@ side's features pass through a *shared* linear layer to a small embedding; the
 two embeddings are concatenated side-to-move first, then reduced through one
 clamped hidden layer to a single score. The reference then integer-quantizes the
 weights to fit a tiny C binary; here we keep float weights for clarity and
-training. Weights are learned in phase 2 — an untrained network is not useful.
+training. Weights are learned in phase 2 - an untrained network is not useful.
 """
 
 from __future__ import annotations

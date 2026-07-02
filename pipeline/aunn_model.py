@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 ########################################
-# 2. モデルの定義
 ########################################
 class AUNN(nn.Module):
     def __init__(
@@ -24,19 +23,7 @@ class AUNN(nn.Module):
         feature_names,
         replacement,
     ):
-        """
-        Args:
-            white_cols (list[str]): white 用特徴量の列名リスト
-            black_cols (list[str]): black 用特徴量の列名リスト（white_cols と同じ長さ）
-            common_cols (list[str]): 共通特徴量の列名リスト
-            side_to_move_col (str): 手番フラグの列名 ("side_to_move")
-            feature_means (Tensor): 全特徴量の平均, shape=(num_features,)
-            feature_stds (Tensor): 全特徴量の標準偏差, shape=(num_features,)
-            feature_maxs (Tensor):
-            feature_to_index (dict): 列名からインデックスへの辞書
-            fixed_weight (Tensor): 固定部分の重み（標準化前の値）, shape=(num_features, 2)
-            fixed_bias (Tensor): 固定部分のバイアス（標準化前の値）, shape=(2,)
-        """
+        """Constructor; see reference notebook 065d for full field descriptions."""
         super().__init__()
 
         embedding_dim = 16
@@ -69,7 +56,6 @@ class AUNN(nn.Module):
 
         num_color_features = len(white_cols)
 
-        # 固定部分は学習中に変化させないので register_buffer
         self.register_buffer("fixed_weight", fixed_weight[self.white_idx] / 2 ** 12)
 
         self.linear_color = nn.Linear(num_color_features, embedding_dim - 2)
@@ -77,55 +63,38 @@ class AUNN(nn.Module):
         self.linear2 = nn.Linear(embedding_dim * 2, l2out_dim)
         self.linear3 = nn.Linear(l2out_dim, 1)
 
-    # ─── ヘルパー関数: 勾配に影響を与えない丸め処理 ─────────────────────────────
     def _round_quant(self, x):
-        # x を scale 倍して round し，その誤差を x に加える（勾配には影響しない）
         return x + (x.detach().round() - x.detach())
 
     def _ceil_quant(self, x):
-        # ceil も同様に勾配に影響しないように行う
         return x + (x.detach().ceil() - x.detach())
 
     def _floor_quant(self, x):
         return x + (x.detach().floor() - x.detach())
 
-    # ─── 全層の量子化済み（正確な整数演算に相当する）重みを返すメンバ関数 ───────────────
     def quantize_weights(self):
-        """
-        AUNN の各層の重み・バイアス（固定部分・正規化のマージ済み）を，
-        QuantizedAUNN.__init__() の計算と同等になるように，
-        固定スケールでラウンド（量子化誤差を加えたラウンド処理）した上で返す．
-        型は fp32 で保持し，逆伝播可能とする．
-        """
-        # ① linear_color の学習可能部分について，正規化のマージ
-        # 　（transpose により (n_color,14) の形にする）
+        """Return each layer's quantized weights (fixed part and normalization merged), rounded at a fixed scale to match QuantizedAUNN; kept in fp32 and differentiable."""
         trainable_color_weight = self.linear_color.weight.transpose(0,1).contiguous()
         trainable_color_weight = trainable_color_weight / self.color_feature_stds[:, None]
         trainable_color_bias = self.linear_color.bias.clone()
         trainable_color_bias = trainable_color_bias - ((self.color_feature_means / self.color_feature_stds) @ self.linear_color.weight.transpose(0,1))
         
-        # ② linear_common の学習可能部分（transpose により (n_common,14)）
         common_weight = self.linear_common.weight.transpose(0,1).contiguous()
         common_weight = common_weight / self.common_feature_stds[:, None]
-        # ここで，linear_common の効果を color のバイアスに合流（両層の出力は加算される）
         trainable_color_bias = trainable_color_bias - ((self.common_feature_means / self.common_feature_stds) @ self.linear_common.weight.transpose(0,1))
         
-        # ③ 固定部分（fixed_weight，固定バイアスは 0 としている）と学習可能部分を結合
         fixed_bias = torch.zeros((2,), device=self.fixed_weight.device)
         combined_weight = torch.cat([self.fixed_weight, trainable_color_weight], dim=1)  # (n_color, 16)
         combined_bias   = torch.cat([fixed_bias, trainable_color_bias], dim=0)           # (16,)
         
-        # ④ スケール係数（QuantizedAUNN では 32*128<<15，すなわち 4096 * 32768）
         scale1 = 32 * 128       # 4096
         scale2 = (1 << 15)      # 32768
         weight_scale = scale1 * scale2  # 134217728
         
-        # ⑤ linear_color 重み・バイアスの量子化（ラウンド処理）
         quant_linear_color_weight = combined_weight * weight_scale
         #quant_linear_color_weight = self._round_quant(quant_linear_color_weight)
-        quant_linear_bias = self._round_quant(combined_bias * scale1) + (1 << 4)  # バイアスには (1<<4) を加算
+        quant_linear_bias = self._round_quant(combined_bias * scale1) + (1 << 4)
         
-        # # ⑥ 各色特徴について，乗算器（multiplyer）の決定
         # n_color = quant_linear_color_weight.shape[0]
         # multipliers = []
         # for i in range(n_color):
@@ -140,7 +109,6 @@ class AUNN(nn.Module):
         # color_multiplyer = torch.tensor(multipliers, dtype=torch.float32, device=quant_linear_color_weight.device)
         # quant_linear_color_weight = self._round_quant(quant_linear_color_weight / color_multiplyer[:, None])
         
-        # # ⑦ linear_common 重みの量子化
         # n_common = common_weight.shape[0]
         # zeros_fixed = torch.zeros((n_common, 2), device=common_weight.device, dtype=common_weight.dtype)
         # quant_linear_common_weight = torch.cat([zeros_fixed, common_weight], dim=1)  # (n_common, 16)
@@ -159,20 +127,15 @@ class AUNN(nn.Module):
         # common_multiplyer = torch.tensor(multipliers_common, dtype=torch.float32, device=quant_linear_common_weight.device)
         # quant_linear_common_weight = self._round_quant(quant_linear_common_weight / common_multiplyer[:, None])
 
-        # ⑥ 各色特徴について，乗算器（multiplyer）の決定（ベクトル化版）
         abs_max_color = quant_linear_color_weight.abs().amax(dim=1)  # shape: (n_color,)
-        # 各行ごとに max_val/32767.0 を計算して ceil_quant を適用し、さらに最小値 1.0 で clamp
         mult_calc = self._ceil_quant(abs_max_color / 32767.0)
         mult_calc = torch.clamp(mult_calc, min=1.0)
-        # self.is_add_in_color はすでに各行について True/False のマスクになっているので、True の場合は 32768、それ以外は計算値 mult_calc を選択
         color_multiplyer = torch.where(self.is_add_in_color.bool(),
                                        torch.tensor(1 << 15, dtype=mult_calc.dtype, device=mult_calc.device),
                                        mult_calc)
-        # 各行ごとに乗算器で割る
         quant_linear_color_weight = self._round_quant(quant_linear_color_weight / color_multiplyer[:, None])
         
         
-        # ⑦ linear_common 重みの量子化（ベクトル化版）
         n_common = common_weight.shape[0]
         zeros_fixed = torch.zeros((n_common, 2), device=common_weight.device, dtype=common_weight.dtype)
         quant_linear_common_weight = torch.cat([zeros_fixed, common_weight], dim=1)  # (n_common, 16)
@@ -186,18 +149,15 @@ class AUNN(nn.Module):
                                         mult_calc_common)
         quant_linear_common_weight = self._round_quant(quant_linear_common_weight / common_multiplyer[:, None])
 
-        # ⑧ replacement 用マスク（QuantizedAUNN.__init__ で設定しているものと同等）
         if not hasattr(self, 'replacement_color_mask_for_forward'):
             replacement_color = [self.replacement.get(self.feature_names[idx][:-2]) for idx in self.white_idx]
             self.replacement_color_mask_for_forward = torch.tensor([r is None for r in replacement_color], device=quant_linear_color_weight.device)
         if not hasattr(self, 'replacement_common_mask_for_forward'):
             replacement_common = [self.replacement.get(self.feature_names[idx]) for idx in self.common_idx]
             self.replacement_common_mask_for_forward = torch.tensor([r is None for r in replacement_common], device=quant_linear_common_weight.device)
-        # 各重みの先頭2要素に対して，replacement マスクを乗じる（マスクが False の場合は 0 となる）
         quant_linear_color_weight[:, :2] *= self.replacement_color_mask_for_forward.to(quant_linear_color_weight.dtype).unsqueeze(1)
         quant_linear_common_weight[:, :2] *= self.replacement_common_mask_for_forward.to(quant_linear_common_weight.dtype).unsqueeze(1)
         
-        # ⑨ later layers（linear2, linear3）の量子化（QuantizedAUNN.__init__ と同等）
         quant_linear2_weight = self._round_quant(self.linear2.weight * 64)
         quant_linear2_bias   = self._round_quant(self.linear2.bias * (64 * 128)) + (1 << 5)
         quant_linear3_weight = self._round_quant(self.linear3.weight.squeeze(0) * 64)
@@ -215,63 +175,45 @@ class AUNN(nn.Module):
             'linear3_bias': quant_linear3_bias                   # scalar
         }
 
-    # ─── forward: 全層で QAT（量子化誤差ラウンドを各演算毎に入れる） ─────────────
     def forward(self, x):
-        """
-        入力 x はバッチサイズ×num_features の fp32 テンソルとする．
-        ここでは，入力はまず整数値にラウンドされたものとみなし，
-        以降の各層の演算は QuantizedAUNN の整数演算と同等になるように，
-        固定スケールでラウンド（量子化誤差を加える）しながら行う．
-        """
-        # 入力をまず整数にラウンド（QuantizedAUNN.forward では int16 と仮定）
-        x_q = self._round_quant(x)  # 勾配を保持したままラウンド
-        x_int = torch.round(x_q)  # 整数値とみなす
+        """Quantization-aware forward: x is treated as integer-rounded, then each layer rounds at a fixed scale so the result matches QuantizedAUNN's integer arithmetic."""
+        x_q = self._round_quant(x)
+        x_int = torch.round(x_q)
 
-        # 各種特徴の抽出（インデックスは既に設定済み）
         white = x_int[:, self.white_idx].to(torch.float32)  # (B, n_color)
         black = x_int[:, self.black_idx].to(torch.float32)  # (B, n_color)
         common = x_int[:, self.common_idx].to(torch.float32)  # (B, n_common)
         
-        # quantize_weights() により各層の量子化済み重みを得る
         q = self.quantize_weights()
         
-        # common 部分の計算
-        # 各 common 入力は，事前に決定した乗算器でスケール
         common_scaled = common * q['common_multiplyer']  # (B, n_common)
-        # 各特徴毎に重みベクトル（長さ16）との内積をとる
         common_out = torch.sum(self._round_quant(common_scaled.unsqueeze(2) * q['linear_common_weight'].unsqueeze(0) / (1<<15)), dim=1)  # (B, 16)
         
-        # color 部分（white，black）について
         white_scaled = white * q['color_multiplyer']  # (B, n_color)
         white_out = torch.sum(self._round_quant(white_scaled.unsqueeze(2) * q['linear_color_weight'].unsqueeze(0) / (1<<15)), dim=1)  # (B, 16)
         black_scaled = black * q['color_multiplyer']
         black_out = torch.sum(self._round_quant(black_scaled.unsqueeze(2) * q['linear_color_weight'].unsqueeze(0) / (1<<15)), dim=1)  # (B, 16)
 
-        # 固定バイアスおよび common 部分の寄与を加える
         white_result = white_out + common_out + q['linear_bias']  # (B, 16)
         black_result = black_out + common_out + q['linear_bias']  # (B, 16)
-        # 右シフト >> 5 相当：32 で割り，floor 処理
         white_result = self._floor_quant(white_result / 32.0)
         white_result = torch.clamp(white_result, 0, 127)
         black_result = self._floor_quant(black_result / 32.0)
         black_result = torch.clamp(black_result, 0, 127)
 
         
-        # 手番に応じて順序を入れ替え
         is_white_to_move = (x[:, self.side_to_move_idx] == 0).unsqueeze(1)  # (B,1)
         first_part = torch.where(is_white_to_move, white_result, black_result)
         second_part = torch.where(is_white_to_move, black_result, white_result)
         combined = torch.cat([first_part, second_part], dim=1)  # (B, 32)
         #print("o combined:", combined.int())
         
-        # linear2 層の計算：内積 + バイアス，その後 >> 6（64 で割る）とクランプ
         out2 = torch.sum(q['linear2_weight'].unsqueeze(0) * combined.unsqueeze(1), dim=2) + q['linear2_bias']
         #print("o out2", out2.int())
         out2 = self._floor_quant(out2 / 64.0)
         out2 = torch.clamp(out2, 0, 127)
 
         
-        # linear3 層の計算：内積 + バイアス，その後 >> 5（32 で割る）
         out3 = torch.sum(q['linear3_weight'] * out2, dim=1) + q['linear3_bias']
         #print("o out:", out3.int())
         out3 = self._floor_quant(out3 / 32.0)
@@ -281,7 +223,7 @@ class AUNN(nn.Module):
         with torch.no_grad():
             # 32767 / (1<<14) * std
             limit_color_add  = 32767 / (1<<14) * self.color_feature_stds.unsqueeze(0)
-            limit_color_mul  = 8 * (self.color_feature_stds  / self.color_feature_maxs ).unsqueeze(0) / 2.0  # (1, n_color), 2 倍の余裕を持たせる
+            limit_color_mul  = 8 * (self.color_feature_stds  / self.color_feature_maxs ).unsqueeze(0) / 2.0
             limit_color  = torch.where(self.is_add_in_color,  limit_color_add,  limit_color_mul)
             self.linear_color.weight.data.clamp_(-limit_color, limit_color)
             limit_common_add = 32767 / (1<<14) * self.common_feature_stds.unsqueeze(0)
@@ -338,7 +280,7 @@ class QuantizedAUNN:
         combined_weight = torch.cat([fixed_weight, trainable_color_weight], dim=1)  # (n_color,16)
         combined_bias   = torch.cat([fixed_bias,   trainable_color_bias],   dim=0)    # (16,)
         self.linear_bias         = torch.round(combined_bias * (32 * 128)).to(torch.int64) + (1 << 4)
-        self.linear_color_weight = combined_weight * (32 * 128 << 15)  # 1<<27 倍スケール
+        self.linear_color_weight = combined_weight * (32 * 128 << 15)
 
         self.color_multiplyer = torch.where(
             torch.tensor([(idx in aunn.white_add_idx) for idx in aunn.white_idx]),
@@ -373,28 +315,26 @@ class QuantizedAUNN:
         linear_color_weight[:, :2] *= self.replacement_color_mask_for_forward[:, None]
         white = white * self.color_multiplyer
         white = (white[:, :, None] * linear_color_weight[None, :, :] + (1<<14) >> 15).sum(1)
-        white = white + common + self.linear_bias  # (B, 16), 32 * 128 倍スケール
-        #print(f"{white.min()=}, {white.max()=}")  # int16 を超えると良くない
-        white = (white >> 5).clamp(min=0, max=127)  # (B, 32), 量子化前の [0.0, 1.0] が [0, 128] にスケールされている
+        white = white + common + self.linear_bias
+        white = (white >> 5).clamp(min=0, max=127)
         black = black * self.color_multiplyer
-        black = (black[:, :, None] * linear_color_weight[None, :, :] + (1<<14) >> 15).sum(1)  # 要素が 0 でなければ平均で n_color<<14, シフト後で n_color/2 が切り捨てられてる
+        black = (black[:, :, None] * linear_color_weight[None, :, :] + (1<<14) >> 15).sum(1)
         black = black + common + self.linear_bias  # (B, 16)
-        #print(f"{black.min()=}, {black.max()=}")  # int16 を超えると良くない
-        black = (black >> 5).clamp(min=0, max=127)  # (B, 32), 量子化前の [0.0, 1.0] が [0, 128] にスケールされている, 平均 1<<4 が切り捨てられるので予め足している
+        black = (black >> 5).clamp(min=0, max=127)
 
         first_part = torch.where(is_white_to_move.unsqueeze(1), white, black)
         second_part = torch.where(is_white_to_move.unsqueeze(1), black, white)
-        combined = torch.cat([first_part, second_part], dim=1)  # (B, 32), 量子化前の [0.0, 1.0] が [0, 128] にスケールされている
+        combined = torch.cat([first_part, second_part], dim=1)
 
         # print("q is_white_to_move", is_white_to_move)
         # print("q combined:", combined.int())
 
-        out = (self.linear2_weight[None, :, :] * combined[:, None, :]).sum(2) + self.linear2_bias  # 64 * 128 倍スケール
+        out = (self.linear2_weight[None, :, :] * combined[:, None, :]).sum(2) + self.linear2_bias
         #print("o out2", out.int())
-        out = (out >> 6).clamp(min=0, max=127)  # 128 倍スケール
-        out = (self.linear3_weight * out).sum(1) + self.linear3_bias  # 64 * 128 倍スケール
+        out = (out >> 6).clamp(min=0, max=127)
+        out = (self.linear3_weight * out).sum(1) + self.linear3_bias
         #print("q out:", out.int())
-        return out >> 5  # (B,), 256 倍スケール
+        return out >> 5
 
     def print(self):
         MAX_LENGTH = 32
@@ -451,7 +391,7 @@ def test_quantized(model, test_input):
 
     print("AUNN output:", aunn_output_scaled)
     print("QuantizedAUNN output:", q_output)
-    print("Difference (Quantized - AUNN×256):", q_output.float() - aunn_output_scaled)
+    print("Difference (Quantized - AUNNx256):", q_output.float() - aunn_output_scaled)
 
     diff = (q_output.float() - aunn_output_scaled).abs()
     print("Mean absolute error:", diff.mean().item())
@@ -476,7 +416,6 @@ def test_quantized(model, test_input):
 
 
 ########################################
-# 3. 学習ループ
 ########################################
 # def train_model_tensor(
 #     data_tensor: torch.Tensor,
@@ -516,7 +455,7 @@ def test_quantized(model, test_input):
 #         scheduler.step()
 #         torch.save(model.state_dict(), f"model_epoch_{epoch+1}.pth")
 
-import threading  # 変更：並列読み込み用にスレッドを利用
+import threading
 from tqdm.auto import tqdm
 import torch
 import torch.nn as nn
@@ -536,34 +475,27 @@ def train_model_tensor(
     model.to(device)
     
     # -------------------------------
-    # 変更：プリフェッチ用の関数を定義
     def prefetch_next(result_container):
-        # dataloader.load_next() の結果を dict に格納
         data, target = dataloader.load_next()
         result_container["data"] = data
         result_container["target"] = target
     # -------------------------------
     
-    # エポック0用に、最初のデータを同期的に読み込む
     current_data, current_target = dataloader.load_next()
     
-    # 次のデータをプリフェッチするためのコンテナとスレッドを用意
     next_result = {}
     prefetch_thread = threading.Thread(target=prefetch_next, args=(next_result,))
-    prefetch_thread.start()  # 変更：バックグラウンドで次のデータファイルの読み込み開始
+    prefetch_thread.start()
 
     for epoch in range(num_epochs):
-        # 変更：前エポック中に開始したプリフェッチスレッドの完了を待機し、結果を取得
         prefetch_thread.join()
         next_data = next_result["data"]
         next_target = next_result["target"]
 
-        # 変更：次のデータ読み込みのプリフェッチを再度開始（現在の学習と並行して実施）
         next_result = {}
         prefetch_thread = threading.Thread(target=prefetch_next, args=(next_result,))
         prefetch_thread.start()
         
-        # 現在のデータ (current_data, current_target) を用いて学習
         N = current_data.shape[0]
         permutation = torch.randperm(N)
         epoch_loss = 0.0
@@ -588,10 +520,8 @@ def train_model_tensor(
         torch.save(model.state_dict(), f"model_epoch_{epoch+1}.pth")
         del current_data, current_target, batch_data, batch_target
 
-        # 変更：エポック終了後、プリフェッチ済みのデータを current_data に更新
         current_data, current_target = next_data, next_target
 
-    # 変更：最終エポック後、バックグラウンドスレッドの終了を保証
     prefetch_thread.join()
 
 # ==== configuration (feature layout, coefs, fixed weights) ====
@@ -609,7 +539,6 @@ feature_names = [
     "pawnMG_1",
     "pawnEG_0",
     "pawnEG_1",
-    # ここまで lazy1
     # pieces<*, KNIGHT> (5)
     "knightUncontestedOutpost_0",
     "knightUncontestedOutpost_1",
@@ -677,8 +606,8 @@ feature_names = [
     "kingPEKingSafetyMG_0",
     "kingPEKingSafetyMG_1",
     "kingPEKingSafetyEG_0",
-    "kingPEKingSafetyEG_1",  # ここまで加算
-    "kingSafeCheckRook_0_0",  # ここから Danger 計算
+    "kingPEKingSafetyEG_1",
+    "kingSafeCheckRook_0_0",
     "kingSafeCheckRook_0_1",
     "kingSafeCheckRook_1_0",
     "kingSafeCheckRook_1_1",
@@ -715,8 +644,8 @@ feature_names = [
     "kingScore_0",
     "kingScore_1",
     "kingFlankDefense_0",
-    "kingFlankDefense_1",  # ここまで Danger 計算
-    "kingDangerMG_0",  # ここから単純加算
+    "kingFlankDefense_1",
+    "kingDangerMG_0",
     "kingDangerMG_1",
     "kingDangerEG_0",
     "kingDangerEG_1",
@@ -745,7 +674,6 @@ feature_names = [
     "passedFreeToAdvance_1",
     "passedFile_0",
     "passedFile_1",
-    # ここまで lazy2
     # threats (18)
     "threatByMinor_0_0",
     "threatByMinor_0_1",
@@ -787,15 +715,15 @@ feature_names = [
     "space_0",
     "space_1",
     # winnable (10)
-    "winnablePassedCount",  # ここから complexity 計算
+    "winnablePassedCount",
     "winnablePawnCount",
     "winnableOutflanking",
     "winnablePawnsOnBothFlanks",
     "winnableInfiltration",
     "winnableNonPawnMaterialZero",
-    "winnableAlmostUnwinnable",  # ここまで complexity 計算
-    "winnableScaleFactor",  # 補助
-    "winnableNonPawnMaterial",  # 補助
+    "winnableAlmostUnwinnable",
+    "winnableScaleFactor",
+    "winnableNonPawnMaterial",
     "winnable",  # -target
     # target
     "intermediate1MG_0",
@@ -970,7 +898,6 @@ adder_features = [
     "winnablePawnsOnBothFlanks", "winnableInfiltration", "winnableNonPawnMaterialZero", "winnableAlmostUnwinnable",
 ]
 
-# 各ブランチに用いる列名リスト
 white_cols = feature_names[:feature_names.index("winnablePassedCount"):2]
 black_cols = feature_names[1:feature_names.index("winnablePassedCount"):2]
 common_cols = feature_names[feature_names.index("winnablePassedCount"):feature_names.index("intermediate1MG_0")]

@@ -1,4 +1,4 @@
-"""``python -m chessbot.native`` — standard-UCI frontend for the native engine."""
+"""``python -m chessbot.native`` - standard-UCI frontend for the native engine."""
 
 from __future__ import annotations
 

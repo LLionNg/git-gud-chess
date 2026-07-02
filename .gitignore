@@ -27,3 +27,6 @@ reference/kaggle_solution/*.ipynb
 pipeline/*.log
 features/
 *.features
+
+# Vendored external GPL project (the now-public original fork), built locally
+kaggle-stockfish/

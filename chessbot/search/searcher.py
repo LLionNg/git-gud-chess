@@ -71,7 +71,7 @@ class Searcher:
         """Convert an in-progress ponder search to a normally-timed one.
 
         The clock is anchored at the original search start, so time spent
-        pondering counts as ours — conservative but never loses on time.
+        pondering counts as ours - conservative but never loses on time.
         """
         limits = self._limits
         was_infinite = limits.infinite
@@ -357,7 +357,7 @@ class Searcher:
 
     @staticmethod
     def _tactical_moves(board: chess.Board) -> list[chess.Move]:
-        """Captures plus queen promotions — the moves quiescence considers."""
+        """Captures plus queen promotions - the moves quiescence considers."""
         moves = list(board.generate_legal_captures())
         seventh = chess.BB_RANK_7 if board.turn == chess.WHITE else chess.BB_RANK_2
         if board.pawns & board.occupied_co[board.turn] & seventh:

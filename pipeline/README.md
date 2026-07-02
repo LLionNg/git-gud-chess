@@ -1,7 +1,7 @@
 # Reproducing the original method (C++ Stockfish fork)
 
 The reference solution's engine was a **private** C++ Stockfish fork during the
-competition — which is why it could not be replicated earlier. It has since been
+competition - which is why it could not be replicated earlier. It has since been
 **made public** at [`github.com/Lgeu/kaggle-stockfish`](https://github.com/Lgeu/kaggle-stockfish),
 so the exact original method is now fully reproducible. This directory contains
 the scripts that do it, all verified working on Windows/MinGW.
@@ -10,32 +10,32 @@ the scripts that do it, all verified working on Windows/MinGW.
 
 ```
                  setup_engine.sh                 generate_data.py
- fork (public) ───────────────► stockfish_gen ──────────────────► features/*.features
-                                     ▲                                   │
-                                     │ recompile (params.h)              │ train.py
-                                     └───────────── params.h ◄───────────┘  (AUNN → quantize)
+ fork (public) ---------------> stockfish_gen ------------------> features/*.features
+                                     ^                                   |
+                                     | recompile (params.h)              | train.py
+                                     +------------- params.h <-----------+  (AUNN -> quantize)
 ```
 
-1. **Build the engine** — `bash pipeline/setup_engine.sh`
+1. **Build the engine** - `bash pipeline/setup_engine.sh`
    Clones the fork, applies a small Windows portability shim (`win_compat.h`),
    downloads the NNUE net, and builds two binaries: `stockfish_play.exe` (plays
    with the trained AUNN evaluation) and `stockfish_gen.exe` (the
    `-DGENERATE_TRAINING_DATA` build that dumps features).
    *Verified:* plays legal chess at ~780k nps, bench passes, detects mate.
 
-2. **Generate training data** — `python pipeline/generate_data.py --engine kaggle-stockfish/stockfish_gen.exe`
+2. **Generate training data** - `python pipeline/generate_data.py --engine kaggle-stockfish/stockfish_gen.exe`
    Self-play whose searches dump each sampled position's **200 Stockfish features**
-   (labelled by the NNUE teacher) to `features/*.features` — the exact int16×200
+   (labelled by the NNUE teacher) to `features/*.features` - the exact int16x200
    format the notebooks consume.
 
-3. **Train + quantize** — `python pipeline/train.py --features kaggle-stockfish/src/features`
+3. **Train + quantize** - `python pipeline/train.py --features kaggle-stockfish/src/features`
    Runs the reference's own `AUNN` (extracted verbatim into `aunn_model.py` from
    notebook 065d), then `QuantizedAUNN.print()` to emit `params.h`.
 
-4. **Recompile** — drop the new `params.h` into `kaggle-stockfish/src/` and rerun
+4. **Recompile** - drop the new `params.h` into `kaggle-stockfish/src/` and rerun
    the build. *Verified:* the engine rebuilds and plays with the new weights.
 
-## Do we have everything? Yes — with one version note
+## Do we have everything? Yes - with one version note
 
 Everything needed is present: the fork is public, GCC/make installed, the NNUE
 teacher downloads, and the training notebook (065d) is in `reference/`.
@@ -47,7 +47,7 @@ the fork's **`main` branch**. The fork's final **`nn-last-spurt` branch is a lat
 default). So:
 
 - Building `nn-last-spurt` (32-wide) and playing with its committed `params.h`:
-  **works, strong** — this is the replicated original engine.
+  **works, strong** - this is the replicated original engine.
 - Retraining end-to-end with 065d (16-wide) matches the `main` branch. `main`'s
   older SIMD code trips strict GCC 16 (`__m256`/`__m256i`); build it with clang or
   an older GCC, or use the 32-wide training notebook (066+, not in the provided
@@ -74,7 +74,7 @@ the reference reached ~58 KB with UPX (LZMA).
 
 Platform note: the `MINIMIZE` build was only ever built/run on **Linux + clang**.
 Under **Windows + MinGW GCC 16** it compiles (after two portability fixes:
-`win_compat.h` outside the `MINIMIZE` guard, and an `<iostream>`→`fprintf` swap in
+`win_compat.h` outside the `MINIMIZE` guard, and an `<iostream>`->`fprintf` swap in
 `misc.cpp`) but **segfaults at runtime**. A working 64 KiB submission therefore
 needs the reference's Linux/clang environment (e.g. WSL) plus UPX. The full-size
 playing engine (`stockfish_play.exe`) is unaffected and is the one to use.

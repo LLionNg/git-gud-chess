@@ -2,9 +2,9 @@
 
 Two renderings of the reference solution's small network share one architecture:
 
-- :class:`~chessbot.evaluation.neural.network.AunnNetwork` — a float, trainable
+- :class:`~chessbot.evaluation.neural.network.AunnNetwork` - a float, trainable
   form used as the engine's neural evaluator (phase-2 training target).
-- :class:`~chessbot.evaluation.neural.quantized.QuantizedAunn` — the integer
+- :class:`~chessbot.evaluation.neural.quantized.QuantizedAunn` - the integer
   (deployment) form, a bit-exact port of the reference's ``QuantizedAUNN``
   validated against its own test vectors in ``tests/test_reference_fidelity.py``.
 

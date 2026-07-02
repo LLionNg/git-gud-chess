@@ -3,7 +3,7 @@
 The fork speaks a shortened UCI dialect (``po`` instead of ``position``,
 ``wtm``/``btm`` instead of ``wtime``/``btime``, ``pd`` instead of ``ponder``), so
 it will not work in a normal chess GUI directly. This adapter presents a standard
-UCI interface on stdin/stdout and translates each line to the fork's dialect —
+UCI interface on stdin/stdout and translates each line to the fork's dialect -
 the same subprocess-wrapper idea as the reference's ``main.py``, but GUI-ready.
 
 By default it selects the trained AUNN evaluation (``Use NNUE=false``), which is
@@ -59,7 +59,7 @@ class UciBridge:
             [str(engine_path)], cwd=str(engine_path.parent),
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1,
         )
-        # Select the AUNN (classical) evaluation — the trained competition solution.
+        # Select the AUNN (classical) evaluation - the trained competition solution.
         self._send(f"setoption name Use NNUE value {'true' if use_nnue else 'false'}")
 
     def _send(self, command: str) -> None:
