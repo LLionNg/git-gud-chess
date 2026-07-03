@@ -1,11 +1,10 @@
-"""NumPy port of the reference AUNN network architecture.
+"""NumPy implementation of the small AUNN evaluation network.
 
-Faithful to the structure in ``reference/kaggle_solution`` (notebook 065d): each
-side's features pass through a *shared* linear layer to a small embedding; the
-two embeddings are concatenated side-to-move first, then reduced through one
-clamped hidden layer to a single score. The reference then integer-quantizes the
-weights to fit a tiny C binary; here we keep float weights for clarity and
-training. Weights are learned in phase 2 - an untrained network is not useful.
+Each side's features pass through a *shared* linear layer to a small embedding;
+the two embeddings are concatenated side-to-move first, then reduced through one
+clamped hidden layer to a single score. Float weights are kept for clarity and
+training - an untrained network is not useful, so weights must be trained first
+(see ``training/train.py``).
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ from chessbot.evaluation.neural import features
 
 EMBEDDING_DIM = 16
 HIDDEN_DIM = 32
-# Activation clamp mirrors the reference's [0, 127] quantized range.
+# Clipped-ReLU activation clamp to a fixed [0, 127] range.
 CLAMP = 127.0
 
 

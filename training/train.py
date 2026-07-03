@@ -1,20 +1,14 @@
-"""Train the Python engine's neural evaluator by knowledge distillation.
+"""Train the neural evaluator by knowledge distillation.
 
-This is Lgeu's method at small scale, kept fully in Python: play out positions,
-label each with a teacher evaluation, then fit the small AUNN so it reproduces
-the teacher from cheap hand-crafted features. The trained float weights are saved
-as ``.npz`` and loaded directly by :class:`NeuralEvaluator` -- a self-contained
-train -> play loop with no C++ engine required.
-
-It differs from ``pipeline/train.py``, which trains the reference's private
-~200-feature net and emits ``params.h`` for the C++ fork. This one trains
-``chessbot``'s own 33-feature :class:`AunnNetwork` over features we can actually
-compute from a board.
+Play out positions, label each with a teacher evaluation, then fit the small AUNN
+so it reproduces the teacher from cheap hand-crafted features. The trained float
+weights are saved as ``.npz`` and loaded directly by :class:`NeuralEvaluator` --
+a self-contained train -> play loop.
 
 Usage:
-    uv run python pipeline/train_python.py --positions 8000 --epochs 100 --out weights.npz
+    uv run python training/train.py --positions 8000 --epochs 120 --out weights.npz
     # distil a strong standard-UCI engine instead of the classical eval:
-    uv run python pipeline/train_python.py --teacher-engine /path/to/stockfish
+    uv run python training/train.py --teacher-engine /path/to/stockfish
 """
 
 from __future__ import annotations
@@ -44,7 +38,7 @@ class TorchAunn(nn.Module):
 
     Trains on *normalized* features for stable gradients; the normalization is
     later folded into the exported raw-feature weights so the numpy network needs
-    no runtime normalization (exactly as the reference folds it during quantization).
+    no runtime normalization.
     """
 
     def __init__(self) -> None:
@@ -142,7 +136,7 @@ def fold_into_network(model: TorchAunn, mean_p: np.ndarray, std_p: np.ndarray,
 
     The model trained on ``(x - mean) / std``; folding ``1/std`` into the weights
     and ``-mean/std`` into the bias makes the numpy network reproduce it on raw
-    features -- the same algebra the reference uses to drop normalization at deploy.
+    features -- so the numpy network needs no runtime normalization at play time.
     """
     with torch.no_grad():
         Wc = model.color.weight.t().cpu().numpy()      # (N_PAIRED, 16)

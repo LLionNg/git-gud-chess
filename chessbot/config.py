@@ -24,7 +24,7 @@ class EvaluationConfig(BaseModel):
     provider: EvaluatorType = EvaluatorType.CLASSICAL
     # Small bonus for having the move; stabilises evaluation symmetry.
     tempo: int = Field(default=18, ge=0, le=100)
-    # Path to quantized weights for the neural provider (phase-2 training output).
+    # Path to the neural provider's trained weights (.npz from training/train.py).
     weights_path: str | None = None
 
 

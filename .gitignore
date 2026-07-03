@@ -12,24 +12,18 @@ __pycache__/
 build/
 dist/
 
-# Trained weights and training data (phase 2 outputs)
+# Trained neural weights
 *.npz
 *.pth
 *.bin
 data/
 weights/
-# Generated quantized weights (reproduction output, not a source file)
-/my_params.h
-/params.h
 
-# Reference Kaggle notebooks: large (~250 MB, embedded outputs), kept locally
-# only. Notebook-dependent tests skip when these are absent.
-reference/kaggle_solution/*.ipynb
-
-# Run logs and generated features
+# Run logs
 *.log
-features/
-*.features
 
-# Vendored external GPL project (the now-public original fork), built locally
+# On-disk artifacts that must never be committed here. They exist locally only
+# (the external fork clone and the large Kaggle notebooks); the full reproduction
+# that uses them lives on the reference/lgeu-solution branch.
+reference/
 kaggle-stockfish/

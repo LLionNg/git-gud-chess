@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "chessbot"
 version = "0.1.0"
-description = "A clean, UCI-compatible chess engine reconstructing the method of Lgeu's top-3 FIDE & Google Efficient Chess AI Challenge solution."
+description = "A clean, dependency-light UCI chess engine: hand-crafted evaluation and alpha-beta search, with an optional small trained neural evaluator."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -18,11 +18,11 @@ dependencies = [
 
 # PEP 735 dependency groups. `uv sync` installs the groups listed in
 # tool.uv.default-groups below, so a single `uv sync` gives you pytest AND the
-# training deps (torch/tqdm) -- `uv run pytest` and `uv run python pipeline/train.py`
+# training dep (torch) -- `uv run pytest` and `uv run python training/train.py`
 # then work with no extra flags.
 [dependency-groups]
 dev = ["pytest>=8.0"]
-train = ["torch>=2.0", "tqdm>=4.66"]
+train = ["torch>=2.0"]
 
 [tool.uv]
 default-groups = ["dev", "train"]

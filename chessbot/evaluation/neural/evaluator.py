@@ -1,8 +1,8 @@
 """Neural evaluation provider wrapping the AUNN network.
 
-Loads phase-2 trained weights and scores positions by extracting features and
-running :class:`AunnNetwork`. Without weights the provider is not useful, so the
-factory falls back to the classical evaluator (see ``build_evaluator``).
+Loads trained weights and scores positions by extracting features and running
+:class:`AunnNetwork`. Without weights the provider is not useful, so the factory
+falls back to the classical evaluator (see ``build_evaluator``).
 """
 
 from __future__ import annotations

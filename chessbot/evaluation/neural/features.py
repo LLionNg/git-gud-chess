@@ -1,10 +1,8 @@
 """Feature extraction for the neural evaluator.
 
-The reference solution fed its network ~224 Stockfish-internal evaluation terms
-that we cannot reproduce without its private C++. This module keeps the *same
-feature layout* it used - colour-paired features, then shared "common" features,
-then a side-to-move flag - over a compact, self-contained feature set. Weights
-trained (phase 2) on these features drive :class:`AunnNetwork`.
+Compact, self-contained evaluation features in a fixed layout - colour-paired
+features first, then shared "common" features, then a side-to-move flag. Weights
+trained on these features (see ``training/train.py``) drive :class:`AunnNetwork`.
 """
 
 from __future__ import annotations

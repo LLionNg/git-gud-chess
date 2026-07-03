@@ -1,8 +1,8 @@
 """Hand-crafted tapered evaluation, the default scoring provider.
 
-This mirrors the feature families of the reference solution (material/placement,
-mobility, king safety, pawn structure, piece bonuses) as an interpretable
-hand-crafted evaluation rather than the neural blend it eventually learned.
+It covers the classic evaluation feature families (material/placement, mobility,
+king safety, pawn structure, piece bonuses) as an interpretable score, and is the
+default when no neural weights are loaded.
 """
 
 from __future__ import annotations

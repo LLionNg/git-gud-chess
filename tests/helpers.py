@@ -2,45 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Optional
-
 import chess
-
-_NOTEBOOK = (Path(__file__).resolve().parents[1]
-             / "reference" / "kaggle_solution" / "chess-065d-lr-1e-2-epoch-500.ipynb")
-
-
-def load_reference():
-    """Load the reference model, coefficients and feature config from notebook 065d.
-
-    Returns ``None`` when the (large) reference notebook is absent, so tests that
-    depend on it skip cleanly.
-    """
-    if not _NOTEBOOK.exists():
-        return None
-    from chessbot.evaluation.neural.quantized import QuantizedAunn, parse_params_header
-
-    notebook = json.loads(_NOTEBOOK.read_text(encoding="utf-8"))
-    cells = [c for c in notebook["cells"] if c.get("cell_type") == "code"]
-    sources = ["".join(c.get("source", [])) for c in cells]
-    config_cell = next(s for s in sources if "feature_names = [" in s)
-    config = "feature_names = [" + config_cell.split("feature_names = [", 1)[1].split(
-        "dataloader = SplitDataLoader")[0]
-    ns: dict = {}
-    exec(config, ns)
-
-    text = ""
-    for out in cells[6].get("outputs", []):
-        if out.get("output_type") == "stream":
-            text += "".join(out.get("text", []))
-    params = parse_params_header(text)
-    feature_to_index = {name: i for i, name in enumerate(ns["feature_names"])}
-    model = QuantizedAunn.from_params(
-        params, ns["white_cols"], ns["black_cols"], ns["common_cols"],
-        feature_to_index, ns["replacement"])
-    return {"model": model, "coefs": ns["coefs"], "feature_names": ns["feature_names"]}
 
 
 def can_force_mate(board: chess.Board, plies: int) -> bool:
