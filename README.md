@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icon.png" alt="chessbot" width="160">
+  <img src="icon.png" alt="chessbot logo" width="160">
 </p>
 
 # chessbot
