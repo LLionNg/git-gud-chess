@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>chessbot</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>chessbot</h1>
+    <div class="controls">
+      <label>Play as
+        <select id="color">
+          <option value="white">White</option>
+          <option value="black">Black</option>
+        </select>
+      </label>
+      <button id="new">New game</button>
+    </div>
+    <div id="board"></div>
+    <p id="status"></p>
+  </main>
+  <div id="promotion" class="promotion hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

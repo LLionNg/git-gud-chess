@@ -1,0 +1,90 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #262421;
+  color: #bababa;
+  display: flex;
+  justify-content: center;
+}
+
+main { padding: 24px; }
+
+h1 { margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #e8e8e8; }
+
+.controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+
+select, button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid #4a4744;
+  border-radius: 6px;
+  background: #3a3734;
+  color: #e8e8e8;
+  cursor: pointer;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, 64px);
+  grid-template-rows: repeat(8, 64px);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .4);
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cell.light { background: #f0d9b5; }
+.cell.dark { background: #b58863; }
+
+.cell.last::before,
+.cell.selected::before,
+.cell.check::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.cell.last::before { background: rgba(155, 199, 0, .35); }
+.cell.selected::before { background: rgba(20, 140, 255, .4); }
+.cell.check::before { background: rgba(220, 40, 40, .45); }
+
+.cell.target::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgba(20, 140, 255, .55);
+}
+
+.piece { position: relative; }
+.piece.white { color: #fafafa; text-shadow: 0 0 2px #000, 0 1px 2px rgba(0, 0, 0, .6); }
+.piece.black { color: #141414; text-shadow: 0 1px 1px rgba(255, 255, 255, .25); }
+
+#status { margin-top: 16px; min-height: 20px; }
+
+.promotion {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, .55);
+}
+
+.promotion.hidden { display: none; }
+.promotion button { font-size: 40px; padding: 8px 16px; }
+.promotion button.white { color: #fafafa; }
+.promotion button.black { color: #141414; }

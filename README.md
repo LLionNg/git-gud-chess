@@ -83,10 +83,26 @@ uv run pytest          # or: python -m pytest
 
 Covers perft, evaluation, mates, tactics, UCI, and the neural provider.
 
+## Play it in your browser
+
+A minimal web board that has no engine of its own - it just renders the position
+and routes your moves to `chessbot` (python-chess is the single rules authority):
+
+```bash
+uv run python -m web            # then open http://127.0.0.1:8000
+```
+
+Play the neural network instead of the classical evaluation with `--weights`:
+
+```bash
+uv run python -m web --weights weights.npz
+```
+
 ## Layout
 
 - `chessbot/` - the engine: `core`, `evaluation` (classical + `neural`), `search`, `uci`.
 - `training/` - the neural distillation trainer.
+- `web/` - a browser board (`api` routes, `services` for engine/game, `static` frontend).
 - `tests/`.
 
 ## Credits

@@ -18,20 +18,21 @@ dependencies = [
 
 # PEP 735 dependency groups. `uv sync` installs the groups listed in
 # tool.uv.default-groups below, so a single `uv sync` gives you pytest AND the
-# training dep (torch) -- `uv run pytest` and `uv run python training/train.py`
-# then work with no extra flags.
+# training dep (torch) and web deps -- `uv run pytest`, `uv run python training/train.py`,
+# and `uv run python -m web` then work with no extra flags.
 [dependency-groups]
 dev = ["pytest>=8.0"]
 train = ["torch>=2.0"]
+web = ["fastapi>=0.110", "uvicorn>=0.29"]
 
 [tool.uv]
-default-groups = ["dev", "train"]
+default-groups = ["dev", "train", "web"]
 
 [project.scripts]
 chessbot = "chessbot.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["chessbot*"]
+include = ["chessbot*", "web*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
