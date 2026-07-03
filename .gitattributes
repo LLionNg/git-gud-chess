@@ -1,0 +1,16 @@
+# Mark binary assets so core.autocrlf never rewrites their bytes.
+# Images
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+# Trained model / weight files
+*.pt   binary
+*.pth  binary
+*.bin  binary
+*.npy  binary
+*.npz  binary
+*.onnx binary
+*.nnue binary
