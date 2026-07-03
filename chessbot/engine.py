@@ -51,5 +51,11 @@ class Engine:
             self.config.evaluation.provider = EvaluatorType(value.strip().lower())
             self._evaluator = build_evaluator(self.config.evaluation)
             self.searcher = Searcher(self.config, self._evaluator)
+        elif key == "evalfile":
+            # Path to the neural provider's .npz weights (from pipeline/train_python.py).
+            path = value.strip()
+            self.config.evaluation.weights_path = None if path in ("", "<empty>") else path
+            self._evaluator = build_evaluator(self.config.evaluation)
+            self.searcher = Searcher(self.config, self._evaluator)
         elif key == "move overhead":
             self.config.search.move_overhead_ms = int(value)

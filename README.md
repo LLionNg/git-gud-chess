@@ -77,9 +77,33 @@ go movetime 2000
 
 ## Training your own model
 
-You do not need to train anything to play (the engine ships with trained weights).
-But if you want to train a fresh model, run `uv sync` once (it installs the
-training deps, including torch), then two commands do it:
+You do not need to train anything to play (both engines ship with trained weights).
+Run `uv sync` once to install the training deps (including torch). There are two
+training loops, depending on which engine you want to feed.
+
+### A. The Python engine - a complete, self-contained loop
+
+This distils a teacher evaluation into `chessbot`'s own small network (Lgeu's
+knowledge-distillation method at small scale), then plays the result. No C++ engine
+required:
+
+```bash
+# train: play positions, label them with a teacher, fit the net -> weights.npz
+uv run python pipeline/train_python.py --positions 8000 --epochs 120 --out weights.npz
+
+# play it: the neural evaluator loads the weights over standard UCI
+uv run python -m chessbot --weights weights.npz
+```
+
+The teacher defaults to the built-in classical evaluation (pure Python); to distil
+a stronger engine instead, pass `--teacher-engine /path/to/stockfish`. The trained
+net finds tactics (wins a free queen) and tracks its teacher closely - train on
+more positions/epochs for strength.
+
+### B. The original C++ network - reference reproduction
+
+This reproduces the published training of the reference's private ~200-feature net
+and emits its `params.h`:
 
 ```bash
 # 1. self-play that dumps 200-feature positions, labelled by the NNUE teacher
@@ -89,24 +113,55 @@ uv run python pipeline/generate_data.py --engine kaggle-stockfish/stockfish_gen.
 uv run python pipeline/train.py --features kaggle-stockfish/src/features --epochs 300 --out my_params.h
 ```
 
-Step 1 self-plays and writes `.features` files; step 2 trains the small network and
-quantizes it to `my_params.h` (use more games/epochs for real strength - the
-reference trained on millions of positions).
+This faithfully reproduces notebook `065d` (the final submission's trainer) and
+writes a valid 16-wide `my_params.h`. **There is, however, no working engine to
+deploy it into, and this was verified exhaustively.** The public 16-wide branches
+(`main`, `tmp`, `cherry-pick-optimization`) are unfinished dev snapshots: built
+with the author's *exact* compiler (clang 19) on Linux (his target) and loaded with
+his *own* final-submission weights, they still hang a free queen and open `a2a3`.
+The only strong, working engine, `nn-last-spurt` (the shipped `stockfish_play.exe`),
+uses a wider 32-wide network whose training notebook was never published. So
+`my_params.h` is a real trained model, but the C++ train -> play loop cannot be
+closed from public materials - play with the shipped `stockfish_play.exe` (the
+author's own weights) instead.
 
-**Deploying it - the honest caveat.** `my_params.h` is 16-wide, matching the
-reference's earlier training notebook (`reference/kaggle_solution/...065d`). The
-public engine branches at that width (`main`, `tmp`) are unfinished dev snapshots
-that play badly even with the NNUE teacher, and the strong shipped engine
-(`nn-last-spurt`) uses a wider network whose training notebook the author never
-published. So the two commands produce a genuine trained model file, but turning
-it into a *strong* self-trained C++ binary needs materials that are not public.
-The engine you already built (`stockfish_play.exe`) uses the author's own trained
-weights and is the one to play with.
+#### Reproducing the clang-19 build yourself
 
-Clang (installed at `C:\llvm-mingw`) can build the 16-wide branches for
-experimentation - `COMP=clang BRANCH=main bash pipeline/setup_engine.sh` - which
-GCC 16 cannot. The full loop is documented in
-[pipeline/README.md](pipeline/README.md).
+The 16-wide `main` engine is a Linux binary, so build and run it from WSL Ubuntu.
+`pipeline/build_main_clang.sh` installs clang-19 (once), fetches `main`, bakes in
+Lgeu's 065d weights, and builds `~/sf-main/src/stockfish` (~1 min):
+
+```bash
+wsl                                              # enter Ubuntu
+bash /mnt/e/GitHub/chessbot/pipeline/build_main_clang.sh
+```
+
+Then play it over standard UCI:
+
+```bash
+cd ~/sf-main/src
+./stockfish
+```
+
+and type:
+
+```
+uci
+setoption name Use NNUE value false
+position startpos
+go depth 12
+```
+
+Or one-shot from Windows PowerShell, no WSL prompt needed:
+
+```powershell
+wsl bash -c "printf 'setoption name Use NNUE value false\nposition startpos\ngo depth 12\nquit\n' | ~/sf-main/src/stockfish"
+```
+
+It will answer `a2a3` and decline the free queen - that is the broken-branch
+result described above, not a setup error.
+
+The full loop and toolchain notes are in [pipeline/README.md](pipeline/README.md).
 
 ## Tests
 

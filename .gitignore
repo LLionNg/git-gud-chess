@@ -18,13 +18,16 @@ dist/
 *.bin
 data/
 weights/
+# Generated quantized weights (reproduction output, not a source file)
+/my_params.h
+/params.h
 
 # Reference Kaggle notebooks: large (~250 MB, embedded outputs), kept locally
 # only. Notebook-dependent tests skip when these are absent.
 reference/kaggle_solution/*.ipynb
 
-# Pipeline run logs and generated features
-pipeline/*.log
+# Run logs and generated features
+*.log
 features/
 *.features
 

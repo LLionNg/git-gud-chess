@@ -57,6 +57,7 @@ class UciProtocol:
         self._write("option name Hash type spin default 64 min 1 max 1024")
         self._write("option name Move Overhead type spin default 30 min 0 max 1000")
         self._write("option name Evaluator type combo default classical var classical var neural")
+        self._write("option name EvalFile type string default <empty>")
         self._write("uciok")
         return True
 
