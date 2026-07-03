@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon.png" alt="chessbot" width="160">
+</p>
+
 # chessbot
 
 A clean, dependency-light **UCI chess engine in Python**: a classical hand-crafted
