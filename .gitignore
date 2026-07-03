@@ -4,6 +4,9 @@
 .ENV
 ENV
 
+# Local editor / preview config
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]
