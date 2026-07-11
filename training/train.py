@@ -17,6 +17,7 @@ import argparse
 import os
 import random
 import sys
+from typing import Protocol
 
 import chess
 import numpy as np
@@ -90,6 +91,12 @@ def generate_positions(n: int, seed: int) -> list[str]:
     return fens[:n]
 
 
+class Teacher(Protocol):
+    """Label provider: scores a position in side-to-move centipawns."""
+
+    def __call__(self, board: chess.Board) -> float: ...
+
+
 class ClassicalTeacher:
     """Pure-Python teacher: the hand-crafted evaluation, side-to-move centipawns."""
 
@@ -119,7 +126,7 @@ class UciEngineTeacher:
         self._engine.quit()
 
 
-def label_positions(fens: list[str], teacher) -> tuple[np.ndarray, np.ndarray]:
+def label_positions(fens: list[str], teacher: Teacher) -> tuple[np.ndarray, np.ndarray]:
     """Extract features and the teacher's centipawn score for every position."""
     feats = np.empty((len(fens), F.NUM_FEATURES), dtype=np.float32)
     labels = np.empty(len(fens), dtype=np.float32)

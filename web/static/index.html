@@ -18,9 +18,25 @@
       </label>
       <button id="new">New game</button>
     </div>
-    <div id="board"></div>
-    <p id="status"></p>
+    <div class="game">
+      <div id="player-top" class="player-bar">
+        <div class="avatar"></div>
+        <div class="player-info">
+          <span class="player-name"></span>
+          <div class="captured"></div>
+        </div>
+      </div>
+      <div id="board"></div>
+      <div id="player-bottom" class="player-bar">
+        <div class="avatar"></div>
+        <div class="player-info">
+          <span class="player-name"></span>
+          <div class="captured"></div>
+        </div>
+      </div>
+      <p id="status"></p>
+    </div>
   </main>
-  <script src="/app.js"></script>
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>

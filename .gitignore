@@ -16,7 +16,7 @@ build/
 dist/
 
 # Trained neural weights
-# *.npz
+*.npz
 *.pth
 *.bin
 data/

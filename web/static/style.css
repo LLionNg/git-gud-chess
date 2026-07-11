@@ -60,11 +60,71 @@ button#new {
 button#new:hover { filter: brightness(1.07); }
 button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
 
+/* ---------- game column ---------- */
+
+.game {
+  width: min(94vw, calc(100vh - 240px), 760px);
+}
+
+/* Player bars mirror chess.com's avatar + name + captured-material rows,
+   so a future OAuth profile only has to fill .avatar and .player-name. */
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 7px 0;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background-color: #454341;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23918f8d'><path d='M12 12.5a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12.5zm0 2.2c-4.2 0-8 2.1-8 5v2.3h16v-2.3c0-2.9-3.8-5-8-5z'/></svg>");
+  background-size: 62%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.player-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.captured {
+  display: flex;
+  align-items: center;
+  min-height: 17px;
+  margin-top: 2px;
+}
+
+.cap-group { display: flex; }
+.cap-group + .cap-group { margin-left: 3px; }
+
+.cap {
+  width: 17px;
+  height: 17px;
+  background-size: cover;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .4));
+}
+
+.cap-group .cap:not(:first-child) { margin-left: -10px; }
+
+.cap-score {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a09e9c;
+}
+
 /* ---------- board ---------- */
 
 #board {
   position: relative;
-  width: min(92vw, calc(100vh - 170px), 680px);
+  width: 100%;
   aspect-ratio: 1;
   border-radius: 5px;
   overflow: hidden;
@@ -107,6 +167,16 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
 
 .square.hover::before {
   box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .75);
+  opacity: 1;
+}
+
+.square.premove::before {
+  background: rgba(220, 60, 50, .45);
+  opacity: 1;
+}
+
+.square.marked::before {
+  background: var(--mark, rgba(235, 97, 80, .8));
   opacity: 1;
 }
 
@@ -177,6 +247,17 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
 .piece.fading { opacity: 0; z-index: 1; }
 .piece.entering { opacity: 0; }
 
+/* ---------- arrow layer ---------- */
+
+.arrows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
+
 /* ---------- promotion popover ---------- */
 
 .promo-backdrop {
@@ -239,4 +320,17 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
   25% { content: '.'; }
   50% { content: '..'; }
   75% { content: '...'; }
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 640px) {
+  main { padding: 12px; }
+  h1 { margin-bottom: 10px; }
+  .controls { margin-bottom: 10px; }
+  .game { width: min(96vw, calc(100vh - 210px)); }
+  .avatar { width: 30px; height: 30px; }
+  .player-name { font-size: 13px; }
+  .cap { width: 14px; height: 14px; }
+  .cap-group .cap:not(:first-child) { margin-left: -8px; }
 }
