@@ -5,13 +5,15 @@ import { askPromotion } from './promotion.js';
 // board, player bars, and status line in sync. Input gestures live in
 // PointerInput; rendering lives in Board.
 export class Game {
-  constructor({ board, drawings, sounds, bars, api, statusEl }) {
+  constructor({ board, drawings, sounds, bars, api, statusEl, dialog, resignEl }) {
     this.board = board;
     this.drawings = drawings;
     this.sounds = sounds;
     this.bars = bars;
     this.api = api;
     this.statusEl = statusEl;
+    this.dialog = dialog;
+    this.resignEl = resignEl;
     this.state = null;
     this.selected = null;
     this.busy = false;
@@ -84,6 +86,7 @@ export class Game {
   }
 
   setStatus(mode, message) {
+    if (this.resignEl) this.resignEl.disabled = !this.state || this.state.is_over || this.busy;
     this.statusEl.classList.toggle('thinking', mode === 'thinking');
     if (mode === 'thinking') { this.statusEl.textContent = 'Engine is thinking'; return; }
     if (mode === 'error') { this.statusEl.textContent = message; return; }
@@ -121,6 +124,7 @@ export class Game {
     this.busy = true;
     try {
       const next = await this.api.newGame(humanColor);
+      this.busy = false;
       const reoriented = this.board.setOrientation(next.human_color === 'black');
       if (reoriented) this.drawings.redraw();
       if (next.engine_move) {
@@ -143,9 +147,8 @@ export class Game {
         this.setStatus();
       }
     } catch (error) {
-      this.setStatus('error', error.message);
-    } finally {
       this.busy = false;
+      this.setStatus('error', error.message);
     }
   }
 
@@ -161,6 +164,26 @@ export class Game {
     if (!this.premove) return;
     this.premove = null;
     this.refresh();
+  }
+
+  async resign() {
+    if (!this.ready || this.over || this.busy) return;
+    try {
+      const next = await this.api.resign();
+      this.state = next;
+      this.selected = null;
+      this.premove = null;
+      this.refresh();
+      this.setStatus();
+      this.sounds.play('end');
+      this.dialog.show({
+        result: next.result,
+        termination: next.termination,
+        humanColor: next.human_color
+      });
+    } catch (error) {
+      this.setStatus('error', error.message);
+    }
   }
 
   async #commitMove(from, to, instant) {
@@ -207,7 +230,17 @@ export class Game {
       this.refresh();
       this.setStatus();
       if (next.engine_move) this.sounds.play(engineCapture ? 'capture' : 'move');
-      if (next.is_over) setTimeout(() => this.sounds.play('end'), 200);
+      if (next.is_over) {
+        // Let the final move settle before the banner and sound land.
+        setTimeout(() => {
+          this.sounds.play('end');
+          this.dialog.show({
+            result: next.result,
+            termination: next.termination,
+            humanColor: next.human_color
+          });
+        }, 350);
+      }
       this.#executePremove();
     } catch (error) {
       this.busy = false;

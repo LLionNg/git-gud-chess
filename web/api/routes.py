@@ -33,7 +33,7 @@ def new_game(payload: NewGameRequest, request: Request) -> GameState:
 @router.get("/state", response_model=GameState)
 def get_state(request: Request) -> GameState:
     game = request.app.state.game
-    return GameState.from_board(game.board, game.human_color)
+    return GameState.from_board(game.board, game.human_color, resigned=game.resigned)
 
 
 @router.post("/move", response_model=GameState)
@@ -46,3 +46,13 @@ def make_move(payload: MoveRequest, request: Request) -> GameState:
         raise HTTPException(status_code=400, detail=str(error))
     engine_move = _maybe_engine_move(game, engine)
     return GameState.from_board(game.board, game.human_color, engine_move)
+
+
+@router.post("/resign", response_model=GameState)
+def resign(request: Request) -> GameState:
+    game = request.app.state.game
+    try:
+        game.resign()
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    return GameState.from_board(game.board, game.human_color, resigned=True)

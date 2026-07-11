@@ -63,7 +63,7 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
 /* ---------- game column ---------- */
 
 .game {
-  width: min(94vw, calc(100vh - 240px), 760px);
+  width: min(94vw, calc(100vh - 270px), 760px);
 }
 
 /* Player bars mirror chess.com's avatar + name + captured-material rows,
@@ -298,14 +298,163 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
 
 .promo-piece:hover { background-color: #f1f1f0; }
 
-/* ---------- status ---------- */
+/* ---------- game over modal ---------- */
+
+.gameover-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 21, 18, .6);
+  z-index: 30;
+}
+
+.gameover {
+  position: relative;
+  width: min(76%, 300px);
+  background: #262522;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  overflow: hidden;
+  text-align: center;
+  animation: gameover-in .18s cubic-bezier(.2, .9, .35, 1.2);
+}
+
+@keyframes gameover-in {
+  from { opacity: 0; transform: scale(.8) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.gameover-close {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, .65);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.gameover-close:hover { color: #ffffff; }
+
+.gameover-head {
+  padding: 22px 16px 14px;
+}
+
+.gameover-head.win { background: #81b64c; }
+.gameover-head.loss { background: #56524e; }
+.gameover-head.draw { background: #56524e; }
+
+.gameover-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.gameover-sub {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, .75);
+}
+
+.gameover-body {
+  padding: 16px 20px 20px;
+}
+
+.side-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a09e9c;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 8px;
+}
+
+.side-select {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.side-btn {
+  width: 52px;
+  height: 52px;
+  border: 2px solid #454341;
+  border-radius: 8px;
+  background-color: #3a3734;
+  background-size: 78%;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: border-color .12s ease, transform .08s ease;
+}
+
+.side-btn:hover { transform: translateY(-2px); }
+.side-btn.picked { border-color: #81b64c; box-shadow: 0 0 0 1px #81b64c inset; }
+
+.rematch {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 0;
+  border: none;
+  border-radius: 8px;
+  background: #81b64c;
+  color: #ffffff;
+  box-shadow: 0 4px 0 #45753c;
+  cursor: pointer;
+  transition: filter .12s ease, transform .06s ease, box-shadow .06s ease;
+}
+
+.rematch:hover { filter: brightness(1.07); }
+.rematch:active { transform: translateY(3px); box-shadow: 0 1px 0 #45753c; }
+
+/* ---------- status and actions ---------- */
+
+.action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
 
 #status {
-  margin-top: 14px;
+  margin: 0;
   min-height: 22px;
   font-size: 15px;
   color: #c3c2c1;
 }
+
+#resign {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 5px;
+  background: #454341;
+  color: #c3c2c1;
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+
+#resign:hover:not(:disabled) { background: #56524e; color: #ffffff; }
+#resign:disabled { opacity: .4; cursor: default; }
+
+/* Two-step confirm: first click arms the button, second resigns. */
+#resign.confirm { background: #e02828; color: #ffffff; }
+#resign.confirm:hover:not(:disabled) { background: #f43c3c; }
 
 #status.thinking::after {
   content: '';

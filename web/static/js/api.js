@@ -8,6 +8,10 @@ export class GameApi {
     return this.#post('/move', { uci });
   }
 
+  async resign() {
+    return this.#post('/resign', {});
+  }
+
   async state() {
     const response = await fetch('/api/state');
     return response.json();
