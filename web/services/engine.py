@@ -1,29 +1,34 @@
 import threading
 
 import chess
-import chess.engine
+
+from chessbot.config import EngineConfig, EvaluatorType
+from chessbot.engine import Engine
+from chessbot.search import SearchLimits
 
 from web.config import WebConfig
 
 
 class EngineService:
-    def __init__(self, config: WebConfig) -> None:
-        self._config = config
-        self._lock = threading.Lock()
-        self._engine: chess.engine.SimpleEngine | None = None
+    """The chessbot engine run in-process.
 
-    def open(self) -> None:
-        command = list(self._config.engine_command)
-        if self._config.weights:
-            command += ["--weights", self._config.weights]
-        self._engine = chess.engine.SimpleEngine.popen_uci(command)
+    No subprocess and no game state, so it works both under uvicorn and inside
+    a serverless function (built once per process, reused across warm requests).
+    """
+
+    def __init__(self, config: WebConfig) -> None:
+        engine_config = EngineConfig()
+        if config.weights:
+            engine_config.evaluation.provider = EvaluatorType.NEURAL
+            engine_config.evaluation.weights_path = config.weights
+        self._engine = Engine(engine_config)
+        self._movetime_ms = config.movetime_ms
+        self._lock = threading.Lock()
 
     def best_move(self, board: chess.Board) -> chess.Move:
-        limit = chess.engine.Limit(time=self._config.movetime_ms / 1000)
         with self._lock:
-            return self._engine.play(board, limit).move
-
-    def close(self) -> None:
-        if self._engine is not None:
-            self._engine.quit()
-            self._engine = None
+            self._engine.set_position(board.fen())
+            result = self._engine.search(SearchLimits(movetime_ms=self._movetime_ms))
+        if result.best_move is None:
+            raise ValueError("no legal move in this position")
+        return result.best_move

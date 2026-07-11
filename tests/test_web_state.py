@@ -4,7 +4,7 @@ import chess
 import pytest
 
 from web.api.schemas import GameState
-from web.services.game import GameService
+from web.services import game as rules
 
 
 def _shuffle_knights(board: chess.Board, times: int) -> None:
@@ -41,26 +41,29 @@ def test_fifty_move_rule_ends_game():
 
 
 def test_resignation_scores_for_the_engine():
-    game = GameService()
-    game.reset(chess.WHITE)
-    game.resign()
-    state = GameState.from_board(game.board, game.human_color, resigned=game.resigned)
+    board = chess.Board()
+    state = GameState.from_board(board, chess.WHITE, resigned=True)
     assert state.is_over
     assert state.result == "0-1"
     assert state.termination == "resignation"
 
-    game.reset(chess.BLACK)
-    game.resign()
-    state = GameState.from_board(game.board, game.human_color, resigned=game.resigned)
+    state = GameState.from_board(board, chess.BLACK, resigned=True)
     assert state.result == "1-0"
 
 
-def test_no_moves_after_resigning():
-    game = GameService()
-    game.reset(chess.WHITE)
-    game.resign()
+def test_no_moves_on_a_finished_position():
+    board = chess.Board()
+    _shuffle_knights(board, 2)
     with pytest.raises(ValueError):
-        game.push("e2e4")
+        rules.push_uci(board, "e2e4")
+    assert not rules.engine_to_move(board, chess.BLACK)
+
+
+def test_illegal_and_invalid_input_rejected():
+    board = chess.Board()
     with pytest.raises(ValueError):
-        game.resign()
-    assert not game.engine_to_move()
+        rules.push_uci(board, "e2e5")
+    with pytest.raises(ValueError):
+        rules.push_uci(board, "not-a-move")
+    with pytest.raises(ValueError):
+        rules.board_from("not a fen")

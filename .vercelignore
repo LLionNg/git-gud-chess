@@ -1,0 +1,10 @@
+# Keep the deployment to what the web app needs: the engine package,
+# the web app, the static frontend, and the demo weights.
+.claude/
+tests/
+training/
+uv.lock
+icon.png
+README.md
+*.bundle
+__pycache__/

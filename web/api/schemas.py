@@ -8,7 +8,16 @@ class NewGameRequest(BaseModel):
 
 
 class MoveRequest(BaseModel):
+    """A move on the position the client holds; the server stores nothing."""
+
+    fen: str
     uci: str
+    human_color: str = "white"
+
+
+class ResignRequest(BaseModel):
+    fen: str
+    human_color: str = "white"
 
 
 class GameState(BaseModel):

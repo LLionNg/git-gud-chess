@@ -1,7 +1,8 @@
 import chess
 from fastapi import APIRouter, HTTPException, Request
 
-from web.api.schemas import GameState, MoveRequest, NewGameRequest
+from web.api.schemas import GameState, MoveRequest, NewGameRequest, ResignRequest
+from web.services import game as rules
 
 router = APIRouter()
 
@@ -10,49 +11,45 @@ def _color(name: str) -> chess.Color:
     return chess.BLACK if name == "black" else chess.WHITE
 
 
-def _maybe_engine_move(game, engine) -> str | None:
-    if not game.engine_to_move():
+def _board(fen: str | None) -> chess.Board:
+    try:
+        return rules.board_from(fen)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+def _maybe_engine_move(board: chess.Board, human_color: chess.Color,
+                       engine) -> str | None:
+    if not rules.engine_to_move(board, human_color):
         return None
-    move = engine.best_move(game.board)
-    game.board.push(move)
+    move = engine.best_move(board)
+    board.push(move)
     return move.uci()
 
 
 @router.post("/new", response_model=GameState)
 def new_game(payload: NewGameRequest, request: Request) -> GameState:
-    game = request.app.state.game
-    engine = request.app.state.engine
-    try:
-        game.reset(_color(payload.human_color), payload.fen)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-    engine_move = _maybe_engine_move(game, engine)
-    return GameState.from_board(game.board, game.human_color, engine_move)
-
-
-@router.get("/state", response_model=GameState)
-def get_state(request: Request) -> GameState:
-    game = request.app.state.game
-    return GameState.from_board(game.board, game.human_color, resigned=game.resigned)
+    board = _board(payload.fen)
+    human_color = _color(payload.human_color)
+    engine_move = _maybe_engine_move(board, human_color, request.app.state.engine)
+    return GameState.from_board(board, human_color, engine_move)
 
 
 @router.post("/move", response_model=GameState)
 def make_move(payload: MoveRequest, request: Request) -> GameState:
-    game = request.app.state.game
-    engine = request.app.state.engine
+    board = _board(payload.fen)
+    human_color = _color(payload.human_color)
     try:
-        game.push(payload.uci)
+        rules.push_uci(board, payload.uci)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
-    engine_move = _maybe_engine_move(game, engine)
-    return GameState.from_board(game.board, game.human_color, engine_move)
+    engine_move = _maybe_engine_move(board, human_color, request.app.state.engine)
+    return GameState.from_board(board, human_color, engine_move)
 
 
 @router.post("/resign", response_model=GameState)
-def resign(request: Request) -> GameState:
-    game = request.app.state.game
-    try:
-        game.resign()
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-    return GameState.from_board(game.board, game.human_color, resigned=True)
+def resign(payload: ResignRequest, request: Request) -> GameState:
+    board = _board(payload.fen)
+    if rules.is_over(board):
+        raise HTTPException(status_code=400, detail="game is already over")
+    return GameState.from_board(board, _color(payload.human_color), resigned=True)

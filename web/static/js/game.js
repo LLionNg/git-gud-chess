@@ -1,6 +1,9 @@
 import { START_FEN, isWhitePiece, movesFrom, parseFen, premoveTargets } from './chess.js';
 import { askPromotion } from './promotion.js';
 
+// The server is stateless, so the current game lives here and in localStorage.
+const STORAGE_KEY = 'chessbot.game';
+
 // Orchestrates the game: server state, move flow, premoves, and keeping the
 // board, player bars, and status line in sync. Input gestures live in
 // PointerInput; rendering lives in Board.
@@ -106,13 +109,20 @@ export class Game {
   // ----- game lifecycle -----
 
   async load() {
-    this.state = await this.api.state();
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (error) { /* corrupt save */ }
+    if (!saved || !saved.fen) return this.newGame('white');
+    this.state = saved;
     this.board.setOrientation(this.state.human_color === 'black');
     this.board.setPosition(parseFen(this.state.fen), true);
     this.drawings.redraw();
     this.refresh();
     this.setStatus();
     return this.state;
+  }
+
+  #store() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state)); } catch (error) { /* storage full */ }
   }
 
   async newGame(humanColor) {
@@ -135,6 +145,7 @@ export class Game {
         this.setStatus();
         setTimeout(() => {
           this.state = next;
+          this.#store();
           this.board.setPosition(parseFen(next.fen), false);
           this.refresh();
           this.setStatus();
@@ -142,13 +153,16 @@ export class Game {
         }, 350);
       } else {
         this.state = next;
+        this.#store();
         this.board.setPosition(parseFen(next.fen), reoriented);
         this.refresh();
         this.setStatus();
       }
+      return next;
     } catch (error) {
       this.busy = false;
       this.setStatus('error', error.message);
+      return this.state;
     }
   }
 
@@ -169,10 +183,11 @@ export class Game {
   async resign() {
     if (!this.ready || this.over || this.busy) return;
     try {
-      const next = await this.api.resign();
+      const next = await this.api.resign(this.state);
       this.state = next;
       this.selected = null;
       this.premove = null;
+      this.#store();
       this.refresh();
       this.setStatus();
       this.sounds.play('end');
@@ -216,7 +231,8 @@ export class Game {
     this.sounds.play(capture ? 'capture' : 'move');
     this.setStatus('thinking');
     try {
-      const next = await this.api.move(uci);
+      // this.state still holds the pre-move position the server expects.
+      const next = await this.api.move(this.state, uci);
       let engineCapture = false;
       if (next.engine_move) {
         const target = next.engine_move.slice(2, 4);
@@ -226,6 +242,7 @@ export class Game {
       }
       this.state = next;
       this.busy = false;
+      this.#store();
       this.board.setPosition(parseFen(next.fen), false);
       this.refresh();
       this.setStatus();
@@ -243,10 +260,13 @@ export class Game {
       }
       this.#executePremove();
     } catch (error) {
+      // The server never applied the move; roll the board back to our state.
       this.busy = false;
       this.premove = null;
+      this.selected = null;
+      this.board.setPosition(parseFen(this.state.fen), true);
+      this.refresh();
       this.setStatus('error', error.message);
-      await this.load();
     }
   }
 

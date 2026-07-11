@@ -1,5 +1,7 @@
-# Runtime dependencies for the chessbot engine.
+# Runtime dependencies for the chessbot engine and the web app.
+# Vercel installs this file when deploying (see vercel.json / DEPLOY.md).
 # Training-only extra (torch) lives in pyproject.toml's [train] group.
 python-chess>=1.11
 pydantic>=2.6
 numpy>=1.26
+fastapi>=0.110
