@@ -1,8 +1,11 @@
 # Keep the deployment to what the web app needs: the engine package,
 # the web app, the static frontend, and the demo weights.
+# pyproject.toml is hidden so Vercel installs from requirements.txt with pip;
+# otherwise uv sync would pull the train group's torch (~4.5 GB bundle).
 .claude/
 tests/
 training/
+pyproject.toml
 uv.lock
 icon.png
 README.md
