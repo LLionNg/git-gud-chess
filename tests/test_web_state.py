@@ -23,6 +23,25 @@ def test_threefold_repetition_ends_game():
     assert state.legal == []
 
 
+def test_replayed_history_detects_repetition():
+    # The client sends a move list, exactly what /move rebuilds the game from.
+    moves = ["g1f3", "g8f6", "f3g1", "f6g8"] * 2
+    board = rules.replay(None, moves[:-1])
+    rules.push_uci(board, moves[-1])
+    state = GameState.from_board(board, chess.WHITE)
+    assert state.is_over
+    assert state.termination == "threefold_repetition"
+    assert state.moves == moves
+    assert state.start_fen == chess.STARTING_FEN
+
+
+def test_replay_rejects_bad_history():
+    with pytest.raises(ValueError):
+        rules.replay(None, ["e2e4", "e2e4"])
+    with pytest.raises(ValueError):
+        rules.replay(None, ["nonsense"])
+
+
 def test_stalemate_and_insufficient_material():
     stalemate = chess.Board("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")
     state = GameState.from_board(stalemate, chess.WHITE)

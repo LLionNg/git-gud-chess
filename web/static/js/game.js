@@ -112,6 +112,8 @@ export class Game {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (error) { /* corrupt save */ }
     if (!saved || !saved.fen) return this.newGame('white');
+    // Saves from before histories were kept restart counting from here.
+    if (!Array.isArray(saved.moves)) saved = { ...saved, start_fen: saved.fen, moves: [] };
     this.state = saved;
     this.board.setOrientation(this.state.human_color === 'black');
     this.board.setPosition(parseFen(this.state.fen), true);

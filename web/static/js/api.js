@@ -5,12 +5,23 @@ export class GameApi {
     return this.#post('/new', { human_color: humanColor, fen });
   }
 
+  // The move list travels with each request so the server can rebuild the
+  // game with history — a bare FEN cannot show draws by repetition.
   async move(state, uci) {
-    return this.#post('/move', { fen: state.fen, uci, human_color: state.human_color });
+    return this.#post('/move', {
+      start_fen: state.start_fen,
+      moves: state.moves,
+      uci,
+      human_color: state.human_color
+    });
   }
 
   async resign(state) {
-    return this.#post('/resign', { fen: state.fen, human_color: state.human_color });
+    return this.#post('/resign', {
+      start_fen: state.start_fen,
+      moves: state.moves,
+      human_color: state.human_color
+    });
   }
 
   async #post(path, body) {

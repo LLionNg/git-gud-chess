@@ -1,27 +1,39 @@
 import chess
 from pydantic import BaseModel
 
+from web.services import game as rules
+
 
 class NewGameRequest(BaseModel):
     human_color: str = "white"
     fen: str | None = None
 
 
-class MoveRequest(BaseModel):
-    """A move on the position the client holds; the server stores nothing."""
+class GameRef(BaseModel):
+    """The game as the client holds it; the server stores nothing.
 
-    fen: str
+    The move list is what lets the server see draws by repetition — a bare
+    FEN cannot express how often a position has occurred.
+    """
+
+    human_color: str = "white"
+    start_fen: str | None = None
+    moves: list[str] = []
+    fen: str | None = None  # legacy clients that sent only the position
+
+
+class MoveRequest(GameRef):
     uci: str
-    human_color: str = "white"
 
 
-class ResignRequest(BaseModel):
-    fen: str
-    human_color: str = "white"
+class ResignRequest(GameRef):
+    pass
 
 
 class GameState(BaseModel):
     fen: str
+    start_fen: str
+    moves: list[str]
     turn: str
     human_color: str
     legal: list[str]
@@ -40,15 +52,14 @@ class GameState(BaseModel):
             result = "0-1" if human_color == chess.WHITE else "1-0"
             termination = "resignation"
         else:
-            # claim_draw applies threefold repetition and the 50-move rule
-            # automatically, like chess.com; without it only the forced
-            # fivefold/75-move variants would end the game.
-            outcome = board.outcome(claim_draw=True)
+            outcome = rules.outcome(board)
             over = outcome is not None
             result = outcome.result() if outcome else None
             termination = outcome.termination.name.lower() if outcome else None
         return cls(
             fen=board.fen(),
+            start_fen=board.root().fen(),
+            moves=[move.uci() for move in board.move_stack],
             turn="white" if board.turn == chess.WHITE else "black",
             human_color="white" if human_color == chess.WHITE else "black",
             legal=[] if over else [move.uci() for move in board.legal_moves],

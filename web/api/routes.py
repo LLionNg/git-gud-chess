@@ -1,7 +1,7 @@
 import chess
 from fastapi import APIRouter, HTTPException, Request
 
-from web.api.schemas import GameState, MoveRequest, NewGameRequest, ResignRequest
+from web.api.schemas import GameRef, GameState, MoveRequest, NewGameRequest, ResignRequest
 from web.services import game as rules
 
 router = APIRouter()
@@ -14,6 +14,17 @@ def _color(name: str) -> chess.Color:
 def _board(fen: str | None) -> chess.Board:
     try:
         return rules.board_from(fen)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+def _game_board(payload: GameRef) -> chess.Board:
+    # A legacy client sends only the position; without history it cannot
+    # get repetition draws, but the game still plays.
+    if payload.fen and not payload.moves and not payload.start_fen:
+        return _board(payload.fen)
+    try:
+        return rules.replay(payload.start_fen, payload.moves)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -37,7 +48,7 @@ def new_game(payload: NewGameRequest, request: Request) -> GameState:
 
 @router.post("/move", response_model=GameState)
 def make_move(payload: MoveRequest, request: Request) -> GameState:
-    board = _board(payload.fen)
+    board = _game_board(payload)
     human_color = _color(payload.human_color)
     try:
         rules.push_uci(board, payload.uci)
@@ -49,7 +60,7 @@ def make_move(payload: MoveRequest, request: Request) -> GameState:
 
 @router.post("/resign", response_model=GameState)
 def resign(payload: ResignRequest, request: Request) -> GameState:
-    board = _board(payload.fen)
+    board = _game_board(payload)
     if rules.is_over(board):
         raise HTTPException(status_code=400, detail="game is already over")
     return GameState.from_board(board, _color(payload.human_color), resigned=True)
