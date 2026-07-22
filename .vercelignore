@@ -7,7 +7,11 @@ tests/
 training/
 pyproject.toml
 uv.lock
-icon.png
+# Root-anchored: the repo-root original is not deployed, but the copy the
+# site serves (web/static/icon.png) must be.
+/icon.png
+/chess_lock.png
+/chess_lock_1.png
 README.md
 *.bundle
 __pycache__/
