@@ -58,6 +58,14 @@ def make_move(payload: MoveRequest, request: Request) -> GameState:
     return GameState.from_board(board, human_color, engine_move)
 
 
+@router.post("/state", response_model=GameState)
+def game_state(payload: GameRef) -> GameState:
+    # Rebuilds a position from its history without asking the engine to move;
+    # the client uses this to land on the player's turn after an undo or redo.
+    board = _game_board(payload)
+    return GameState.from_board(board, _color(payload.human_color))
+
+
 @router.post("/resign", response_model=GameState)
 def resign(payload: ResignRequest, request: Request) -> GameState:
     board = _game_board(payload)

@@ -16,6 +16,16 @@ export class GameApi {
     });
   }
 
+  // Rebuild a position after undo/redo edits the move list; the engine
+  // is never asked to reply, so the client lands on the player's turn.
+  async state(state) {
+    return this.#post('/state', {
+      start_fen: state.start_fen,
+      moves: state.moves,
+      human_color: state.human_color
+    });
+  }
+
   async resign(state) {
     return this.#post('/resign', {
       start_fen: state.start_fen,
