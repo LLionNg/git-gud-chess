@@ -24,7 +24,7 @@ export class PlayerBars {
 
   #render(bar, color, counts, humanColor) {
     // Placeholder identity; an OAuth profile would set the name and avatar here.
-    bar.querySelector('.player-name').textContent = color === humanColor ? 'You' : 'chessbot';
+    bar.querySelector('.player-name').textContent = color === humanColor ? 'You' : 'Magnus.exe';
     const mine = color === 'white' ? 'w' : 'b';
     const theirs = mine === 'w' ? 'b' : 'w';
     const row = bar.querySelector('.captured');
