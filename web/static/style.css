@@ -669,9 +669,30 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--teal-d
   border-radius: 999px;
 }
 
+/* Hell burns even before you hover it: red card, breathing aura. */
+.mode-card[data-mode="hell"] {
+  border-color: rgba(224, 70, 58, .45);
+  background: linear-gradient(180deg, rgba(224, 70, 58, .09), rgba(110, 18, 12, .06));
+  animation: hell-aura 2.6s ease-in-out infinite;
+}
+
+@keyframes hell-aura {
+  0%, 100% { box-shadow: 0 0 16px rgba(224, 70, 58, .18), inset 0 0 20px rgba(224, 70, 58, .05); }
+  50% { box-shadow: 0 0 30px rgba(224, 70, 58, .4), inset 0 0 28px rgba(224, 70, 58, .11); }
+}
+
+.mode-card[data-mode="hell"] h3 {
+  color: #ff6b5e;
+  text-shadow: 0 0 14px rgba(224, 70, 58, .55);
+}
+
+.mode-card[data-mode="hell"] .mode-art {
+  box-shadow: 0 0 18px rgba(224, 70, 58, .5), 0 8px 22px rgba(0, 0, 0, .45);
+}
+
 .mode-card[data-mode="hell"]:hover {
-  border-color: rgba(224, 70, 58, .6);
-  background: rgba(224, 70, 58, .07);
+  border-color: rgba(224, 70, 58, .8);
+  background: linear-gradient(180deg, rgba(224, 70, 58, .14), rgba(110, 18, 12, .1));
 }
 
 .mode-card[data-mode="hell"] .mode-tag {
