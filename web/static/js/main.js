@@ -27,7 +27,10 @@ const game = new Game({
   api: new GameApi(),
   statusEl: document.getElementById('status'),
   dialog,
-  resignEl: document.getElementById('resign')
+  resignEl: document.getElementById('resign'),
+  undoEl: document.getElementById('undo'),
+  redoEl: document.getElementById('redo'),
+  modeBadge: document.getElementById('mode-badge')
 });
 new PointerInput({ board, game, drawings, sounds });
 
@@ -42,7 +45,53 @@ dialog.onRematch = color => {
 // changes color on New game.
 colorEl.addEventListener('change', () => game.setFlipped(colorEl.value === 'black'));
 
-document.getElementById('new').addEventListener('click', () => game.newGame(colorEl.value));
+// ----- mode picker -----
+
+const modeModal = document.getElementById('mode-modal');
+
+document.getElementById('new').addEventListener('click', () => modeModal.classList.add('open'));
+modeModal.addEventListener('click', event => {
+  if (event.target === modeModal) modeModal.classList.remove('open');
+});
+addEventListener('keydown', event => {
+  if (event.key === 'Escape') modeModal.classList.remove('open');
+});
+for (const card of modeModal.querySelectorAll('.mode-card')) {
+  card.addEventListener('click', () => {
+    modeModal.classList.remove('open');
+    game.newGame(colorEl.value, card.dataset.mode);
+  });
+}
+
+// ----- undo / redo -----
+
+// In hell mode the buttons stay clickable but locked; clicking them only
+// rattles the chains.
+function shake(el) {
+  el.classList.remove('shake');
+  el.offsetWidth;  // restart the animation
+  el.classList.add('shake');
+}
+
+for (const [el, action] of [
+  [document.getElementById('undo'), () => game.undo()],
+  [document.getElementById('redo'), () => game.redo()]
+]) {
+  el.addEventListener('click', () => {
+    if (el.classList.contains('locked')) { shake(el); return; }
+    action();
+  });
+}
+
+// ----- board colors -----
+
+// Blue-white is the house default; green-white is one click away.
+const THEME_KEY = 'chessbot.boardTheme';
+if (localStorage.getItem(THEME_KEY) === 'green') document.body.classList.add('theme-green');
+document.getElementById('swap-colors').addEventListener('click', () => {
+  const green = document.body.classList.toggle('theme-green');
+  try { localStorage.setItem(THEME_KEY, green ? 'green' : 'blue'); } catch (error) { /* storage full */ }
+});
 
 // Resign asks for confirmation chess.com-style: first click arms the button,
 // a second click within a few seconds resigns.
@@ -68,4 +117,13 @@ resignEl.addEventListener('click', () => {
   game.resign();
 });
 
-game.load().then(state => { colorEl.value = state.human_color; });
+game.load().then(state => {
+  colorEl.value = state.human_color;
+  // Arriving from the landing page's mode picker starts a fresh game in
+  // that mode; the query is stripped so a refresh does not restart it.
+  const mode = new URLSearchParams(location.search).get('mode');
+  if (['practice', 'normal', 'hell'].includes(mode)) {
+    history.replaceState(null, '', location.pathname);
+    game.newGame(colorEl.value, mode);
+  }
+});

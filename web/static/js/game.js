@@ -4,11 +4,15 @@ import { askPromotion } from './promotion.js';
 // The server is stateless, so the current game lives here and in localStorage.
 const STORAGE_KEY = 'chessbot.game';
 
+// How many takebacks each mode grants for a whole game.
+const UNDO_ALLOWANCE = { practice: Infinity, normal: 1, hell: 0 };
+
 // Orchestrates the game: server state, move flow, premoves, and keeping the
 // board, player bars, and status line in sync. Input gestures live in
 // PointerInput; rendering lives in Board.
 export class Game {
-  constructor({ board, drawings, sounds, bars, api, statusEl, dialog, resignEl }) {
+  constructor({ board, drawings, sounds, bars, api, statusEl, dialog, resignEl,
+                undoEl, redoEl, modeBadge }) {
     this.board = board;
     this.drawings = drawings;
     this.sounds = sounds;
@@ -17,10 +21,16 @@ export class Game {
     this.statusEl = statusEl;
     this.dialog = dialog;
     this.resignEl = resignEl;
+    this.undoEl = undoEl;
+    this.redoEl = redoEl;
+    this.modeBadge = modeBadge;
     this.state = null;
     this.selected = null;
     this.busy = false;
     this.premove = null;   // { from, to }
+    this.mode = 'normal';
+    this.undosLeft = UNDO_ALLOWANCE.normal;
+    this.redoStack = [];   // units of plies removed by undo, oldest first
   }
 
   // ----- queries -----
@@ -43,6 +53,33 @@ export class Game {
 
   isHumanPiece(code) {
     return isWhitePiece(code) === (this.state.human_color === 'white');
+  }
+
+  // Plies the human has played, derived from who moved first. Undo is only
+  // meaningful while at least one of the player's own moves is on the board.
+  #humanPlies() {
+    if (!this.state) return 0;
+    const startWhite = (this.state.start_fen || START_FEN).split(' ')[1] !== 'b';
+    const humanFirst = startWhite === (this.state.human_color === 'white');
+    const n = this.state.moves.length;
+    return humanFirst ? Math.ceil(n / 2) : Math.floor(n / 2);
+  }
+
+  // Whether the ply at `index` was played by the human.
+  #humanPly(index) {
+    const startWhite = (this.state.start_fen || START_FEN).split(' ')[1] !== 'b';
+    const humanFirst = startWhite === (this.state.human_color === 'white');
+    return (index % 2 === 0) === humanFirst;
+  }
+
+  canUndo() {
+    return this.ready && !this.busy && this.mode !== 'hell' && this.undosLeft > 0
+      && this.state.termination !== 'resignation' && this.#humanPlies() > 0;
+  }
+
+  canRedo() {
+    return this.ready && !this.busy && this.mode !== 'hell'
+      && this.state.termination !== 'resignation' && this.redoStack.length > 0;
   }
 
   // Legal targets on the player's turn; movement-pattern targets otherwise,
@@ -88,8 +125,28 @@ export class Game {
     }
   }
 
+  #updateActions() {
+    const hell = this.mode === 'hell';
+    if (this.undoEl) {
+      // Hell keeps the buttons clickable so the lock can taunt the player;
+      // the click handler shakes instead of undoing.
+      this.undoEl.classList.toggle('locked', hell);
+      this.undoEl.disabled = !hell && !this.canUndo();
+    }
+    if (this.redoEl) {
+      this.redoEl.classList.toggle('locked', hell);
+      this.redoEl.disabled = !hell && !this.canRedo();
+    }
+    if (this.modeBadge) {
+      this.modeBadge.hidden = !this.ready;
+      this.modeBadge.textContent = this.mode;
+      this.modeBadge.dataset.mode = this.mode;
+    }
+  }
+
   setStatus(mode, message) {
     if (this.resignEl) this.resignEl.disabled = !this.state || this.state.is_over || this.busy;
+    this.#updateActions();
     this.statusEl.classList.toggle('thinking', mode === 'thinking');
     if (mode === 'thinking') { this.statusEl.textContent = 'Engine is thinking'; return; }
     if (mode === 'error') { this.statusEl.textContent = message; return; }
@@ -114,6 +171,10 @@ export class Game {
     if (!saved || !saved.fen) return this.newGame('white');
     // Saves from before histories were kept restart counting from here.
     if (!Array.isArray(saved.moves)) saved = { ...saved, start_fen: saved.fen, moves: [] };
+    this.mode = UNDO_ALLOWANCE[saved.mode] !== undefined ? saved.mode : 'normal';
+    // null marks the unlimited allowance; JSON cannot hold Infinity.
+    this.undosLeft = saved.undos_left ?? UNDO_ALLOWANCE[this.mode];
+    this.redoStack = Array.isArray(saved.redo) ? saved.redo : [];
     this.state = saved;
     this.board.setOrientation(this.state.human_color === 'black');
     this.board.setPosition(parseFen(this.state.fen), true);
@@ -124,11 +185,20 @@ export class Game {
   }
 
   #store() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state)); } catch (error) { /* storage full */ }
+    const save = {
+      ...this.state,
+      mode: this.mode,
+      undos_left: Number.isFinite(this.undosLeft) ? this.undosLeft : null,
+      redo: this.redoStack
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); } catch (error) { /* storage full */ }
   }
 
-  async newGame(humanColor) {
+  async newGame(humanColor, mode) {
     if (this.busy) return;
+    if (UNDO_ALLOWANCE[mode] !== undefined) this.mode = mode;
+    this.undosLeft = UNDO_ALLOWANCE[this.mode];
+    this.redoStack = [];
     this.sounds.unlock();
     this.selected = null;
     this.premove = null;
@@ -203,6 +273,54 @@ export class Game {
     }
   }
 
+  // ----- undo / redo -----
+
+  // Takes back the player's last move together with the engine's reply, so
+  // the board always lands back on the player's turn.
+  async undo() {
+    if (!this.canUndo()) return;
+    const moves = this.state.moves.slice();
+    const count = this.#humanPly(moves.length - 1) ? 1 : 2;
+    const removed = moves.splice(moves.length - count, count);
+    this.redoStack.push(removed);
+    this.undosLeft -= 1;
+    await this.#rebuild(moves, () => {
+      this.redoStack.pop();
+      this.undosLeft += 1;
+    });
+  }
+
+  async redo() {
+    if (!this.canRedo()) return;
+    const unit = this.redoStack.pop();
+    const moves = this.state.moves.concat(unit);
+    await this.#rebuild(moves, () => this.redoStack.push(unit));
+  }
+
+  // Replaces the move list and asks the server to replay it; rollback undoes
+  // the bookkeeping if the request fails.
+  async #rebuild(moves, rollback) {
+    this.busy = true;
+    this.selected = null;
+    this.premove = null;
+    this.setStatus();
+    try {
+      const next = await this.api.state({ ...this.state, moves });
+      this.busy = false;
+      this.state = next;
+      this.#store();
+      this.board.setPosition(parseFen(next.fen), false);
+      this.drawings.clear();
+      this.refresh();
+      this.setStatus();
+      this.sounds.play('move');
+    } catch (error) {
+      this.busy = false;
+      rollback();
+      this.setStatus('error', error.message);
+    }
+  }
+
   async #commitMove(from, to, instant) {
     const promotions = this.state.legal
       .filter(uci => uci.slice(0, 4) === from + to && uci.length === 5)
@@ -244,6 +362,8 @@ export class Game {
       }
       this.state = next;
       this.busy = false;
+      // Playing a fresh move abandons whatever the redo stack held.
+      this.redoStack = [];
       this.#store();
       this.board.setPosition(parseFen(next.fen), false);
       this.refresh();
