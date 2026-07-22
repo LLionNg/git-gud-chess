@@ -310,7 +310,14 @@ export class Game {
     this.#store();
     this.refresh();
     this.setStatus();
-    if (off || !this.ready || this.over || this.state.turn === this.state.human_color) return;
+    if (!off) await this.#engineReply();
+  }
+
+  // Lets the engine answer the current position when control shifts to it
+  // mid-game (free board switched back on, or the player changed sides).
+  async #engineReply() {
+    if (!this.ready || this.over || this.freeBoard) return;
+    if (this.state.turn === this.state.human_color) return;
     this.busy = true;
     this.setStatus('thinking');
     try {
@@ -341,6 +348,25 @@ export class Game {
       this.busy = false;
       this.setStatus('error', error.message);
     }
+  }
+
+  // Mid-game side switch: the player takes over `color`, the engine
+  // inherits the other army, the view flips, and the engine answers
+  // immediately if the position now belongs to it.
+  async setHumanColor(color) {
+    if (!this.ready || this.busy) return;
+    if (color !== 'white' && color !== 'black') return;
+    if (color === this.state.human_color) return;
+    this.state = { ...this.state, human_color: color };
+    this.selected = null;
+    this.premove = null;
+    // Redo units were sized for the other side's turn order.
+    this.redoStack = [];
+    this.setFlipped(color === 'black');
+    this.#store();
+    this.refresh();
+    this.setStatus();
+    await this.#engineReply();
   }
 
   // ----- undo / redo -----

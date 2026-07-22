@@ -42,9 +42,12 @@ dialog.onRematch = color => {
   game.newGame(color);
 };
 
-// Flip the view as soon as the side is picked; the game itself only
-// changes color on New game.
-colorEl.addEventListener('change', () => game.setFlipped(colorEl.value === 'black'));
+// Changing sides applies to the game in progress: the player takes over
+// that color and the engine answers if the position is now its move.
+colorEl.addEventListener('change', () => {
+  if (game.ready) game.setHumanColor(colorEl.value);
+  else game.setFlipped(colorEl.value === 'black');
+});
 
 // ----- mode picker -----
 

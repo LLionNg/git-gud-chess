@@ -15,6 +15,9 @@
 body.theme-green {
   --sq-light: #ebecd0;
   --sq-dark: #779556;
+  /* Action buttons follow the board: green boards get green buttons. */
+  --teal: #81b64c;
+  --teal-deep: #45753c;
 }
 
 body {
@@ -134,10 +137,13 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--teal-d
 .engine-toggle.off .ind {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
-  background: url('/img/chess_lock_1.png') center 18% / cover no-repeat;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+  border-radius: 50%;
+  background: url('/img/engine_lock.png') center / cover no-repeat;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
 }
+
+/* The display rule above would defeat the hidden attribute otherwise. */
+.engine-toggle[hidden] { display: none; }
 
 /* Two-swatch toggle previewing the active board colors; the swatches track
    the CSS variables, so they flip together with the board. */
