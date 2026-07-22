@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>git gud chess</title>
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>git gud chess</h1>
+    <div class="controls">
+      <label>Play as
+        <select id="color">
+          <option value="white">White</option>
+          <option value="black">Black</option>
+        </select>
+      </label>
+      <button id="new">New game</button>
+      <span id="mode-badge" class="mode-badge" hidden></span>
+      <button id="swap-colors" title="Swap board colors" aria-label="Swap board colors">
+        <span class="swatch light"></span><span class="swatch dark"></span>
+      </button>
+    </div>
+    <div class="game">
+      <div id="player-top" class="player-bar">
+        <div class="avatar"></div>
+        <div class="player-info">
+          <span class="player-name"></span>
+          <div class="captured"></div>
+        </div>
+      </div>
+      <div id="board"></div>
+      <div id="player-bottom" class="player-bar">
+        <div class="avatar"></div>
+        <div class="player-info">
+          <span class="player-name"></span>
+          <div class="captured"></div>
+        </div>
+      </div>
+      <div class="action-row">
+        <p id="status"></p>
+        <div class="action-buttons">
+          <button id="undo" title="Undo">
+            <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+              <path fill="currentColor" d="M12 5v3l-5-4 5-4v3c5 0 9 4 9 9 0 4.4-3.2 8.1-7.4 8.9l-.4-2C16.5 18.3 19 15.4 19 12c0-3.9-3.1-7-7-7zM5 12c0-1 .2-2 .6-2.9l-1.8-.8C3.3 9.4 3 10.7 3 12c0 3.4 1.9 6.4 4.7 7.9l1-1.7C6.5 17 5 14.7 5 12z"/>
+            </svg>
+            <span>Undo</span>
+          </button>
+          <button id="redo" title="Redo">
+            <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+              <path fill="currentColor" d="M12 5v3l5-4-5-4v3c-5 0-9 4-9 9 0 4.4 3.2 8.1 7.4 8.9l.4-2C7.5 18.3 5 15.4 5 12c0-3.9 3.1-7 7-7zm7 7c0-1-.2-2-.6-2.9l1.8-.8c.5 1.1.8 2.4.8 3.7 0 3.4-1.9 6.4-4.7 7.9l-1-1.7C17.5 17 19 14.7 19 12z"/>
+            </svg>
+            <span>Redo</span>
+          </button>
+          <button id="resign" title="Resign">
+            <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+              <path fill="currentColor" d="M6 21V3h2v1h9.5l-2.2 4.5L17.5 13H8v8z"/>
+            </svg>
+            <span>Resign</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="mode-backdrop" id="mode-modal" role="dialog" aria-modal="true" aria-label="Choose a game mode">
+    <div class="mode-dialog">
+      <h2>Choose your mode</h2>
+      <p class="mode-sub">The difference is how much mercy the undo button shows you.</p>
+      <div class="mode-cols">
+        <button class="mode-card" data-mode="practice">
+          <div class="mode-art" style="background-image:url('/pieces/wP.svg')"></div>
+          <h3>Practice</h3>
+          <p>Undo and redo without limit. Take moves back, rewind whole lines, try again as many times as you need.</p>
+          <span class="mode-tag">Undo and redo: unlimited</span>
+        </button>
+        <button class="mode-card" data-mode="normal">
+          <div class="mode-art" style="background-image:url('/icon.png')"></div>
+          <h3>Normal</h3>
+          <p>One undo for the whole game, and you may redo the move you took back. A single mercy. Spend it wisely.</p>
+          <span class="mode-tag">Undo: once per game</span>
+        </button>
+        <button class="mode-card" data-mode="hell">
+          <div class="mode-art" style="background-image:url('/img/chess_lock.png')"></div>
+          <h3>Hell</h3>
+          <p>Undo and redo are chained shut. Every move is final, every blunder is forever. The engine remembers.</p>
+          <span class="mode-tag">Undo and redo: locked</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
