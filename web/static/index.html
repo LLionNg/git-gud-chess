@@ -561,7 +561,7 @@ footer .foot-links { display: flex; gap: 22px; }
       <div class="board-card">
         <div id="board"></div>
         <div class="board-caption">
-          <span class="game-name">Morphy vs. Duke of Brunswick &amp; Count Isouard, Paris Opera, 1858</span>
+          <span class="game-name" id="game-name">Morphy vs. Duke of Brunswick &amp; Count Isouard, Paris Opera, 1858</span>
           <span class="san" id="san">&nbsp;</span>
         </div>
       </div>
@@ -783,33 +783,99 @@ setInterval(() => {
   evaltxt.textContent = (evalScore >= 0 ? '+' : '') + evalScore.toFixed(1);
 }, 1800);
 
-/* ================= hero board: the Opera Game ================= */
+/* ================= hero board: famous games on rotation ================= */
 const FILES = 'abcdefgh';
 const sqXY = sq => [FILES.indexOf(sq[0]), 8 - +sq[1]];
 
-// Each ply: from, to, san; cap = square whose piece dies; rook = castling rook hop.
-const GAME = [
-  { f:'e2', t:'e4', san:'1. e4' },       { f:'e7', t:'e5', san:'1... e5' },
-  { f:'g1', t:'f3', san:'2. Nf3' },      { f:'d7', t:'d6', san:'2... d6' },
-  { f:'d2', t:'d4', san:'3. d4' },       { f:'c8', t:'g4', san:'3... Bg4' },
-  { f:'d4', t:'e5', cap:'e5', san:'4. dxe5' }, { f:'g4', t:'f3', cap:'f3', san:'4... Bxf3' },
-  { f:'d1', t:'f3', cap:'f3', san:'5. Qxf3' }, { f:'d6', t:'e5', cap:'e5', san:'5... dxe5' },
-  { f:'f1', t:'c4', san:'6. Bc4' },      { f:'g8', t:'f6', san:'6... Nf6' },
-  { f:'f3', t:'b3', san:'7. Qb3' },      { f:'d8', t:'e7', san:'7... Qe7' },
-  { f:'b1', t:'c3', san:'8. Nc3' },      { f:'c7', t:'c6', san:'8... c6' },
-  { f:'c1', t:'g5', san:'9. Bg5' },      { f:'b7', t:'b5', san:'9... b5' },
-  { f:'c3', t:'b5', cap:'b5', san:'10. Nxb5' }, { f:'c6', t:'b5', cap:'b5', san:'10... cxb5' },
-  { f:'c4', t:'b5', cap:'b5', san:'11. Bxb5+' }, { f:'b8', t:'d7', san:'11... Nbd7' },
-  { f:'e1', t:'c1', rook:{ f:'a1', t:'d1' }, san:'12. O-O-O' }, { f:'a8', t:'d8', san:'12... Rd8' },
-  { f:'d1', t:'d7', cap:'d7', san:'13. Rxd7' }, { f:'d8', t:'d7', cap:'d7', san:'13... Rxd7' },
-  { f:'h1', t:'d1', san:'14. Rd1' },     { f:'e7', t:'e6', san:'14... Qe6' },
-  { f:'b5', t:'d7', cap:'d7', san:'15. Bxd7+' }, { f:'f6', t:'d7', cap:'d7', san:'15... Nxd7' },
-  { f:'b3', t:'b8', san:'16. Qb8+' },    { f:'d7', t:'b8', cap:'b8', san:'16... Nxb8' },
-  { f:'d1', t:'d8', san:'17. Rd8#', mate:true },
+// Each ply: from, to, san; cap = square of the captured piece (differs from
+// t only for en passant); rook = castling rook hop; mate flags checkmate.
+// Generated and legality-checked with python-chess from the source PGNs.
+const GAMES = [
+  { name: "Morphy vs. Duke of Brunswick & Count Isouard, Paris Opera, 1858",
+    moves: [
+      {f:"e2",t:"e4",san:"1. e4"}, {f:"e7",t:"e5",san:"1... e5"},
+      {f:"g1",t:"f3",san:"2. Nf3"}, {f:"d7",t:"d6",san:"2... d6"},
+      {f:"d2",t:"d4",san:"3. d4"}, {f:"c8",t:"g4",san:"3... Bg4"},
+      {f:"d4",t:"e5",san:"4. dxe5",cap:"e5"}, {f:"g4",t:"f3",san:"4... Bxf3",cap:"f3"},
+      {f:"d1",t:"f3",san:"5. Qxf3",cap:"f3"}, {f:"d6",t:"e5",san:"5... dxe5",cap:"e5"},
+      {f:"f1",t:"c4",san:"6. Bc4"}, {f:"g8",t:"f6",san:"6... Nf6"},
+      {f:"f3",t:"b3",san:"7. Qb3"}, {f:"d8",t:"e7",san:"7... Qe7"},
+      {f:"b1",t:"c3",san:"8. Nc3"}, {f:"c7",t:"c6",san:"8... c6"},
+      {f:"c1",t:"g5",san:"9. Bg5"}, {f:"b7",t:"b5",san:"9... b5"},
+      {f:"c3",t:"b5",san:"10. Nxb5",cap:"b5"}, {f:"c6",t:"b5",san:"10... cxb5",cap:"b5"},
+      {f:"c4",t:"b5",san:"11. Bxb5+",cap:"b5"}, {f:"b8",t:"d7",san:"11... Nbd7"},
+      {f:"e1",t:"c1",san:"12. O-O-O",rook:{f:"a1",t:"d1"}}, {f:"a8",t:"d8",san:"12... Rd8"},
+      {f:"d1",t:"d7",san:"13. Rxd7",cap:"d7"}, {f:"d8",t:"d7",san:"13... Rxd7",cap:"d7"},
+      {f:"h1",t:"d1",san:"14. Rd1"}, {f:"e7",t:"e6",san:"14... Qe6"},
+      {f:"b5",t:"d7",san:"15. Bxd7+",cap:"d7"}, {f:"f6",t:"d7",san:"15... Nxd7",cap:"d7"},
+      {f:"b3",t:"b8",san:"16. Qb8+"}, {f:"d7",t:"b8",san:"16... Nxb8",cap:"b8"},
+      {f:"d1",t:"d8",san:"17. Rd8#",mate:true},
+    ] },
+  { name: "Anderssen vs. Kieseritzky, The Immortal Game, London, 1851",
+    moves: [
+      {f:"e2",t:"e4",san:"1. e4"}, {f:"e7",t:"e5",san:"1... e5"},
+      {f:"f2",t:"f4",san:"2. f4"}, {f:"e5",t:"f4",san:"2... exf4",cap:"f4"},
+      {f:"f1",t:"c4",san:"3. Bc4"}, {f:"d8",t:"h4",san:"3... Qh4+"},
+      {f:"e1",t:"f1",san:"4. Kf1"}, {f:"b7",t:"b5",san:"4... b5"},
+      {f:"c4",t:"b5",san:"5. Bxb5",cap:"b5"}, {f:"g8",t:"f6",san:"5... Nf6"},
+      {f:"g1",t:"f3",san:"6. Nf3"}, {f:"h4",t:"h6",san:"6... Qh6"},
+      {f:"d2",t:"d3",san:"7. d3"}, {f:"f6",t:"h5",san:"7... Nh5"},
+      {f:"f3",t:"h4",san:"8. Nh4"}, {f:"h6",t:"g5",san:"8... Qg5"},
+      {f:"h4",t:"f5",san:"9. Nf5"}, {f:"c7",t:"c6",san:"9... c6"},
+      {f:"g2",t:"g4",san:"10. g4"}, {f:"h5",t:"f6",san:"10... Nf6"},
+      {f:"h1",t:"g1",san:"11. Rg1"}, {f:"c6",t:"b5",san:"11... cxb5",cap:"b5"},
+      {f:"h2",t:"h4",san:"12. h4"}, {f:"g5",t:"g6",san:"12... Qg6"},
+      {f:"h4",t:"h5",san:"13. h5"}, {f:"g6",t:"g5",san:"13... Qg5"},
+      {f:"d1",t:"f3",san:"14. Qf3"}, {f:"f6",t:"g8",san:"14... Ng8"},
+      {f:"c1",t:"f4",san:"15. Bxf4",cap:"f4"}, {f:"g5",t:"f6",san:"15... Qf6"},
+      {f:"b1",t:"c3",san:"16. Nc3"}, {f:"f8",t:"c5",san:"16... Bc5"},
+      {f:"c3",t:"d5",san:"17. Nd5"}, {f:"f6",t:"b2",san:"17... Qxb2",cap:"b2"},
+      {f:"f4",t:"d6",san:"18. Bd6"}, {f:"c5",t:"g1",san:"18... Bxg1",cap:"g1"},
+      {f:"e4",t:"e5",san:"19. e5"}, {f:"b2",t:"a1",san:"19... Qxa1+",cap:"a1"},
+      {f:"f1",t:"e2",san:"20. Ke2"}, {f:"b8",t:"a6",san:"20... Na6"},
+      {f:"f5",t:"g7",san:"21. Nxg7+",cap:"g7"}, {f:"e8",t:"d8",san:"21... Kd8"},
+      {f:"f3",t:"f6",san:"22. Qf6+"}, {f:"g8",t:"f6",san:"22... Nxf6",cap:"f6"},
+      {f:"d6",t:"e7",san:"23. Be7#",mate:true},
+    ] },
+  { name: "Carlsen vs. Ernst, Wijk aan Zee, 2004",
+    moves: [
+      {f:"e2",t:"e4",san:"1. e4"}, {f:"c7",t:"c6",san:"1... c6"},
+      {f:"d2",t:"d4",san:"2. d4"}, {f:"d7",t:"d5",san:"2... d5"},
+      {f:"b1",t:"c3",san:"3. Nc3"}, {f:"d5",t:"e4",san:"3... dxe4",cap:"e4"},
+      {f:"c3",t:"e4",san:"4. Nxe4",cap:"e4"}, {f:"c8",t:"f5",san:"4... Bf5"},
+      {f:"e4",t:"g3",san:"5. Ng3"}, {f:"f5",t:"g6",san:"5... Bg6"},
+      {f:"h2",t:"h4",san:"6. h4"}, {f:"h7",t:"h6",san:"6... h6"},
+      {f:"g1",t:"f3",san:"7. Nf3"}, {f:"b8",t:"d7",san:"7... Nd7"},
+      {f:"h4",t:"h5",san:"8. h5"}, {f:"g6",t:"h7",san:"8... Bh7"},
+      {f:"f1",t:"d3",san:"9. Bd3"}, {f:"h7",t:"d3",san:"9... Bxd3",cap:"d3"},
+      {f:"d1",t:"d3",san:"10. Qxd3",cap:"d3"}, {f:"e7",t:"e6",san:"10... e6"},
+      {f:"c1",t:"f4",san:"11. Bf4"}, {f:"g8",t:"f6",san:"11... Ngf6"},
+      {f:"e1",t:"c1",san:"12. O-O-O",rook:{f:"a1",t:"d1"}}, {f:"f8",t:"e7",san:"12... Be7"},
+      {f:"g3",t:"e4",san:"13. Ne4"}, {f:"d8",t:"a5",san:"13... Qa5"},
+      {f:"c1",t:"b1",san:"14. Kb1"}, {f:"e8",t:"g8",san:"14... O-O",rook:{f:"h8",t:"f8"}},
+      {f:"e4",t:"f6",san:"15. Nxf6+",cap:"f6"}, {f:"d7",t:"f6",san:"15... Nxf6",cap:"f6"},
+      {f:"f3",t:"e5",san:"16. Ne5"}, {f:"a8",t:"d8",san:"16... Rad8"},
+      {f:"d3",t:"e2",san:"17. Qe2"}, {f:"c6",t:"c5",san:"17... c5"},
+      {f:"e5",t:"g6",san:"18. Ng6"}, {f:"f7",t:"g6",san:"18... fxg6",cap:"g6"},
+      {f:"e2",t:"e6",san:"19. Qxe6+",cap:"e6"}, {f:"g8",t:"h8",san:"19... Kh8"},
+      {f:"h5",t:"g6",san:"20. hxg6",cap:"g6"}, {f:"f6",t:"g8",san:"20... Ng8"},
+      {f:"f4",t:"h6",san:"21. Bxh6",cap:"h6"}, {f:"g7",t:"h6",san:"21... gxh6",cap:"h6"},
+      {f:"h1",t:"h6",san:"22. Rxh6+",cap:"h6"}, {f:"g8",t:"h6",san:"22... Nxh6",cap:"h6"},
+      {f:"e6",t:"e7",san:"23. Qxe7",cap:"e7"}, {f:"h6",t:"f7",san:"23... Nf7"},
+      {f:"g6",t:"f7",san:"24. gxf7",cap:"f7"}, {f:"h8",t:"g7",san:"24... Kg7"},
+      {f:"d1",t:"d3",san:"25. Rd3"}, {f:"d8",t:"d6",san:"25... Rd6"},
+      {f:"d3",t:"g3",san:"26. Rg3+"}, {f:"d6",t:"g6",san:"26... Rg6"},
+      {f:"e7",t:"e5",san:"27. Qe5+"}, {f:"g7",t:"f7",san:"27... Kxf7",cap:"f7"},
+      {f:"e5",t:"f5",san:"28. Qf5+"}, {f:"g6",t:"f6",san:"28... Rf6"},
+      {f:"f5",t:"d7",san:"29. Qd7#",mate:true},
+    ] },
 ];
 
 const board = document.getElementById('board');
 const sanEl = document.getElementById('san');
+const nameEl = document.getElementById('game-name');
+// Start on a random game so repeat visitors get variety, then rotate.
+let gameIndex = Math.floor(Math.random() * GAMES.length);
 let pieces, hlFrom, hlTo, ply, timer;
 
 function place(el, sq) {
@@ -838,22 +904,32 @@ function setupBoard() {
   board.prepend(hlFrom, hlTo);
   ply = 0;
   sanEl.innerHTML = '&nbsp;';
+  nameEl.textContent = GAMES[gameIndex].name;
 }
 
 function playPly() {
-  if (ply >= GAME.length) {  // game over: hold the mate, then reset
+  const moves = GAMES[gameIndex].moves;
+  if (ply >= moves.length) {  // game over: hold the mate, then bring on the next game
     timer = setTimeout(() => {
       board.style.opacity = '0';
-      setTimeout(() => { setupBoard(); board.style.opacity = '1'; timer = setTimeout(playPly, 900); }, 550);
+      setTimeout(() => {
+        gameIndex = (gameIndex + 1) % GAMES.length;
+        setupBoard();
+        board.style.opacity = '1';
+        timer = setTimeout(playPly, 900);
+      }, 550);
     }, 3400);
     return;
   }
-  const m = GAME[ply++];
+  const m = moves[ply++];
   const mover = pieces.get(m.f);
-  if (m.cap && pieces.has(m.t)) {
-    const dead = pieces.get(m.t);
-    dead.classList.add('captured');
-    setTimeout(() => dead.remove(), 450);
+  if (m.cap) {
+    const dead = pieces.get(m.cap);
+    if (dead) {
+      dead.classList.add('captured');
+      setTimeout(() => dead.remove(), 450);
+      pieces.delete(m.cap);
+    }
   }
   pieces.delete(m.f);
   pieces.set(m.t, mover);
@@ -895,12 +971,14 @@ setupBoard();
 if (motionOK) { timer = setTimeout(playPly, 1400); }
 else {
   // reduced motion: jump straight to the final mating position
-  GAME.forEach(m => {
-    if (m.cap && pieces.has(m.t)) pieces.get(m.t).remove();
+  const moves = GAMES[gameIndex].moves;
+  moves.forEach(m => {
+    if (m.cap && pieces.has(m.cap)) { pieces.get(m.cap).remove(); pieces.delete(m.cap); }
     const p = pieces.get(m.f); pieces.delete(m.f); pieces.set(m.t, p); place(p, m.t);
     if (m.rook) { const r = pieces.get(m.rook.f); pieces.delete(m.rook.f); pieces.set(m.rook.t, r); place(r, m.rook.t); }
   });
-  sanEl.innerHTML = '<span class="mate">17. Rd8#</span>';
+  const last = moves[moves.length - 1];
+  sanEl.innerHTML = '<span class="mate">' + last.san + '</span>';
 }
 </script>
 </body>
