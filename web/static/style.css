@@ -91,47 +91,53 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--teal-d
 .mode-badge[data-mode="practice"] { color: #8fc98f; border-color: rgba(143, 201, 143, .4); }
 .mode-badge[data-mode="hell"] { color: #e0564a; border-color: rgba(224, 86, 74, .45); }
 
-/* Practice-only switch for the engine. On: teal with a lit dot. Off: amber
-   with a hollow dot, meaning the player commands both armies. */
+/* Practice-only switch for the engine, styled like the New game button.
+   On: solid teal with a lit dot. Off: solid amber wearing the chained
+   bishop, meaning the player commands both armies. */
 .engine-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  padding: 8px 14px;
-  border: 1px solid rgba(86, 182, 208, .55);
+  padding: 8px 16px;
+  border: none;
   border-radius: 5px;
-  background: rgba(86, 182, 208, .12);
-  color: #7fd0e6;
+  background: var(--teal);
+  color: #ffffff;
+  box-shadow: 0 4px 0 var(--teal-deep);
   cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, color .15s ease;
+  transition: filter .12s ease, transform .06s ease, box-shadow .06s ease,
+              background .15s ease;
 }
 
 .engine-toggle .ind {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: #56b6d0;
-  box-shadow: 0 0 8px rgba(86, 182, 208, .9);
+  background: #eafcff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, .9);
 }
 
-.engine-toggle:hover:not(:disabled) { background: rgba(86, 182, 208, .2); }
+.engine-toggle:hover:not(:disabled) { filter: brightness(1.07); }
+.engine-toggle:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--teal-deep); }
 .engine-toggle:disabled { opacity: .5; cursor: default; }
 
 .engine-toggle.off {
-  border-color: rgba(255, 178, 66, .55);
-  background: rgba(255, 178, 66, .1);
-  color: #ffb242;
+  background: #d98f2b;
+  box-shadow: 0 4px 0 #8f5c14;
 }
+
+.engine-toggle.off:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #8f5c14; }
 
 .engine-toggle.off .ind {
-  background: transparent;
-  box-shadow: inset 0 0 0 2px #ffb242;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: url('/img/chess_lock_1.png') center 18% / cover no-repeat;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
 }
-
-.engine-toggle.off:hover:not(:disabled) { background: rgba(255, 178, 66, .18); }
 
 /* Two-swatch toggle previewing the active board colors; the swatches track
    the CSS variables, so they flip together with the board. */
