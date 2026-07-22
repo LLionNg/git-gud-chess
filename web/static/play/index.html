@@ -22,6 +22,10 @@
       </label>
       <button id="new">New game</button>
       <span id="mode-badge" class="mode-badge" hidden></span>
+      <button id="engine-toggle" class="engine-toggle" hidden
+              title="Switch the engine off to move both sides and set up a scenario">
+        <span class="ind"></span><span class="label">Engine: On</span>
+      </button>
       <button id="swap-colors" title="Swap board colors" aria-label="Swap board colors">
         <span class="swatch light"></span><span class="swatch dark"></span>
       </button>
@@ -76,7 +80,7 @@
         <button class="mode-card" data-mode="practice">
           <div class="mode-art" style="background-image:url('/pieces/wP.svg')"></div>
           <h3>Practice</h3>
-          <p>Undo and redo without limit. Take moves back, rewind whole lines, try again as many times as you need.</p>
+          <p>Undo and redo without limit, and switch the engine off to move both sides and set up any scenario you like.</p>
           <span class="mode-tag">Undo and redo: unlimited</span>
         </button>
         <button class="mode-card" data-mode="normal">

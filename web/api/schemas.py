@@ -24,6 +24,15 @@ class GameRef(BaseModel):
 
 class MoveRequest(GameRef):
     uci: str
+    # Practice mode's free board sends False so the player can answer with
+    # either color; the engine stays silent.
+    engine_enabled: bool = True
+
+
+class StateRequest(GameRef):
+    # When the free board hands control back mid-position, think=True asks
+    # the engine to reply from here if it is its turn.
+    think: bool = False
 
 
 class ResignRequest(GameRef):

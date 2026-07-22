@@ -91,6 +91,48 @@ button#new:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--teal-d
 .mode-badge[data-mode="practice"] { color: #8fc98f; border-color: rgba(143, 201, 143, .4); }
 .mode-badge[data-mode="hell"] { color: #e0564a; border-color: rgba(224, 86, 74, .45); }
 
+/* Practice-only switch for the engine. On: teal with a lit dot. Off: amber
+   with a hollow dot, meaning the player commands both armies. */
+.engine-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: 1px solid rgba(86, 182, 208, .55);
+  border-radius: 5px;
+  background: rgba(86, 182, 208, .12);
+  color: #7fd0e6;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.engine-toggle .ind {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #56b6d0;
+  box-shadow: 0 0 8px rgba(86, 182, 208, .9);
+}
+
+.engine-toggle:hover:not(:disabled) { background: rgba(86, 182, 208, .2); }
+.engine-toggle:disabled { opacity: .5; cursor: default; }
+
+.engine-toggle.off {
+  border-color: rgba(255, 178, 66, .55);
+  background: rgba(255, 178, 66, .1);
+  color: #ffb242;
+}
+
+.engine-toggle.off .ind {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px #ffb242;
+}
+
+.engine-toggle.off:hover:not(:disabled) { background: rgba(255, 178, 66, .18); }
+
 /* Two-swatch toggle previewing the active board colors; the swatches track
    the CSS variables, so they flip together with the board. */
 #swap-colors {

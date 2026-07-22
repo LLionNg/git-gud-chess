@@ -7,22 +7,26 @@ export class GameApi {
 
   // The move list travels with each request so the server can rebuild the
   // game with history — a bare FEN cannot show draws by repetition.
-  async move(state, uci) {
+  // engineEnabled=false (practice free board) keeps the engine silent.
+  async move(state, uci, engineEnabled = true) {
     return this.#post('/move', {
       start_fen: state.start_fen,
       moves: state.moves,
       uci,
-      human_color: state.human_color
+      human_color: state.human_color,
+      engine_enabled: engineEnabled
     });
   }
 
-  // Rebuild a position after undo/redo edits the move list; the engine
-  // is never asked to reply, so the client lands on the player's turn.
-  async state(state) {
+  // Rebuild a position after the move list is edited. think=true asks the
+  // engine to answer from the position if it is its turn (used when the
+  // free board switches the engine back on).
+  async state(state, think = false) {
     return this.#post('/state', {
       start_fen: state.start_fen,
       moves: state.moves,
-      human_color: state.human_color
+      human_color: state.human_color,
+      think
     });
   }
 

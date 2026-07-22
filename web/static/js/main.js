@@ -30,7 +30,8 @@ const game = new Game({
   resignEl: document.getElementById('resign'),
   undoEl: document.getElementById('undo'),
   redoEl: document.getElementById('redo'),
-  modeBadge: document.getElementById('mode-badge')
+  modeBadge: document.getElementById('mode-badge'),
+  engineToggle: document.getElementById('engine-toggle')
 });
 new PointerInput({ board, game, drawings, sounds });
 
@@ -82,6 +83,12 @@ for (const [el, action] of [
     action();
   });
 }
+
+// ----- engine toggle (practice free board) -----
+
+document.getElementById('engine-toggle').addEventListener('click', () => {
+  game.setEngineOff(!game.engineOff);
+});
 
 // ----- board colors -----
 

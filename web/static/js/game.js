@@ -14,7 +14,7 @@ const UNDO_ALLOWANCE = { practice: Infinity, normal: 1, hell: 0 };
 // PointerInput; rendering lives in Board.
 export class Game {
   constructor({ board, drawings, sounds, bars, api, statusEl, dialog, resignEl,
-                undoEl, redoEl, modeBadge }) {
+                undoEl, redoEl, modeBadge, engineToggle }) {
     this.board = board;
     this.drawings = drawings;
     this.sounds = sounds;
@@ -26,6 +26,7 @@ export class Game {
     this.undoEl = undoEl;
     this.redoEl = redoEl;
     this.modeBadge = modeBadge;
+    this.engineToggle = engineToggle;
     this.state = null;
     this.selected = null;
     this.busy = false;
@@ -33,6 +34,12 @@ export class Game {
     this.mode = 'normal';
     this.undosLeft = UNDO_ALLOWANCE.normal;
     this.redoStack = [];   // units of plies removed by undo, oldest first
+    this.engineOff = false;   // practice-only: silence the engine
+  }
+
+  // Practice with the engine switched off: the player commands both armies.
+  get freeBoard() {
+    return this.mode === 'practice' && this.engineOff;
   }
 
   // ----- queries -----
@@ -50,11 +57,14 @@ export class Game {
   }
 
   myTurn() {
-    return this.ready && !this.busy && this.state.turn === this.state.human_color;
+    if (!this.ready || this.busy) return false;
+    return this.freeBoard || this.state.turn === this.state.human_color;
   }
 
+  // On the free board every side-to-move piece is the player's.
   isHumanPiece(code) {
-    return isWhitePiece(code) === (this.state.human_color === 'white');
+    const owner = this.freeBoard ? this.state.turn : this.state.human_color;
+    return isWhitePiece(code) === (owner === 'white');
   }
 
   // Plies the human has played, derived from who moved first. Undo is only
@@ -75,8 +85,9 @@ export class Game {
   }
 
   canUndo() {
-    return this.ready && !this.busy && this.mode !== 'hell' && this.undosLeft > 0
-      && this.state.termination !== 'resignation' && this.#humanPlies() > 0;
+    if (!this.ready || this.busy || this.mode === 'hell' || this.undosLeft <= 0) return false;
+    if (this.state.termination === 'resignation') return false;
+    return this.freeBoard ? this.state.moves.length > 0 : this.#humanPlies() > 0;
   }
 
   canRedo() {
@@ -144,6 +155,13 @@ export class Game {
       this.modeBadge.textContent = this.mode;
       this.modeBadge.dataset.mode = this.mode;
     }
+    if (this.engineToggle) {
+      this.engineToggle.hidden = this.mode !== 'practice';
+      this.engineToggle.disabled = !this.ready || this.busy;
+      this.engineToggle.classList.toggle('off', this.engineOff);
+      this.engineToggle.querySelector('.label').textContent =
+        this.engineOff ? 'Engine: Off' : 'Engine: On';
+    }
   }
 
   setStatus(mode, message) {
@@ -162,6 +180,7 @@ export class Game {
     const turn = this.state.turn === 'white' ? 'White' : 'Black';
     let text = turn + ' to move';
     if (this.state.check_square) text += ' — check';
+    if (this.freeBoard) text += ' (free board)';
     this.statusEl.textContent = text;
   }
 
@@ -177,6 +196,7 @@ export class Game {
     // null marks the unlimited allowance; JSON cannot hold Infinity.
     this.undosLeft = saved.undos_left ?? UNDO_ALLOWANCE[this.mode];
     this.redoStack = Array.isArray(saved.redo) ? saved.redo : [];
+    this.engineOff = this.mode === 'practice' && Boolean(saved.engine_off);
     this.state = saved;
     this.board.setOrientation(this.state.human_color === 'black');
     this.board.setPosition(parseFen(this.state.fen), true);
@@ -191,7 +211,8 @@ export class Game {
       ...this.state,
       mode: this.mode,
       undos_left: Number.isFinite(this.undosLeft) ? this.undosLeft : null,
-      redo: this.redoStack
+      redo: this.redoStack,
+      engine_off: this.engineOff
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); } catch (error) { /* storage full */ }
   }
@@ -201,6 +222,7 @@ export class Game {
     if (UNDO_ALLOWANCE[mode] !== undefined) this.mode = mode;
     this.undosLeft = UNDO_ALLOWANCE[this.mode];
     this.redoStack = [];
+    this.engineOff = false;
     this.sounds.unlock();
     this.selected = null;
     this.premove = null;
@@ -275,14 +297,61 @@ export class Game {
     }
   }
 
+  // ----- engine toggle (practice free board) -----
+
+  // Switching the engine off frees both armies for the player to set up a
+  // scenario; switching it back on lets the engine answer immediately if
+  // the position is its turn.
+  async setEngineOff(off) {
+    if (this.mode !== 'practice' || this.busy || off === this.engineOff) return;
+    this.engineOff = off;
+    this.selected = null;
+    this.premove = null;
+    this.#store();
+    this.refresh();
+    this.setStatus();
+    if (off || !this.ready || this.over || this.state.turn === this.state.human_color) return;
+    this.busy = true;
+    this.setStatus('thinking');
+    try {
+      const next = await this.api.state(this.state, true);
+      let capture = false;
+      if (next.engine_move) {
+        const target = next.engine_move.slice(2, 4);
+        capture = Boolean(this.board.pieceAt(target));
+      }
+      this.busy = false;
+      this.state = next;
+      this.#store();
+      this.board.setPosition(parseFen(next.fen), false);
+      this.refresh();
+      this.setStatus();
+      if (next.engine_move) this.sounds.play(capture ? 'capture' : 'move');
+      if (next.is_over) {
+        setTimeout(() => {
+          this.sounds.play('end');
+          this.dialog.show({
+            result: next.result,
+            termination: next.termination,
+            humanColor: next.human_color
+          });
+        }, 350);
+      }
+    } catch (error) {
+      this.busy = false;
+      this.setStatus('error', error.message);
+    }
+  }
+
   // ----- undo / redo -----
 
   // Takes back the player's last move together with the engine's reply, so
-  // the board always lands back on the player's turn.
+  // the board always lands back on the player's turn. On the free board
+  // every ply is the player's, so undo steps a single ply at a time.
   async undo() {
     if (!this.canUndo()) return;
     const moves = this.state.moves.slice();
-    const count = this.#humanPly(moves.length - 1) ? 1 : 2;
+    const count = this.freeBoard || this.#humanPly(moves.length - 1) ? 1 : 2;
     const removed = moves.splice(moves.length - count, count);
     this.redoStack.push(removed);
     this.undosLeft -= 1;
@@ -354,7 +423,7 @@ export class Game {
     this.setStatus('thinking');
     try {
       // this.state still holds the pre-move position the server expects.
-      const next = await this.api.move(this.state, uci);
+      const next = await this.api.move(this.state, uci, !this.freeBoard);
       let engineCapture = false;
       if (next.engine_move) {
         const target = next.engine_move.slice(2, 4);

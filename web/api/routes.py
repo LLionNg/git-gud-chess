@@ -1,7 +1,9 @@
 import chess
 from fastapi import APIRouter, HTTPException, Request
 
-from web.api.schemas import GameRef, GameState, MoveRequest, NewGameRequest, ResignRequest
+from web.api.schemas import (
+    GameRef, GameState, MoveRequest, NewGameRequest, ResignRequest, StateRequest,
+)
 from web.services import game as rules
 
 router = APIRouter()
@@ -54,16 +56,23 @@ def make_move(payload: MoveRequest, request: Request) -> GameState:
         rules.push_uci(board, payload.uci)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
-    engine_move = _maybe_engine_move(board, human_color, request.app.state.engine)
+    engine_move = None
+    if payload.engine_enabled:
+        engine_move = _maybe_engine_move(board, human_color, request.app.state.engine)
     return GameState.from_board(board, human_color, engine_move)
 
 
 @router.post("/state", response_model=GameState)
-def game_state(payload: GameRef) -> GameState:
-    # Rebuilds a position from its history without asking the engine to move;
-    # the client uses this to land on the player's turn after an undo or redo.
+def game_state(payload: StateRequest, request: Request) -> GameState:
+    # Rebuilds a position from its history. Undo/redo uses the default
+    # think=False; the free board sends think=True when the engine is
+    # switched back on so it can answer from the current position.
     board = _game_board(payload)
-    return GameState.from_board(board, _color(payload.human_color))
+    human_color = _color(payload.human_color)
+    engine_move = None
+    if payload.think:
+        engine_move = _maybe_engine_move(board, human_color, request.app.state.engine)
+    return GameState.from_board(board, human_color, engine_move)
 
 
 @router.post("/resign", response_model=GameState)
