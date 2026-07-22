@@ -571,7 +571,7 @@ footer .foot-links { display: flex; gap: 22px; }
 
 <div class="marquee" aria-hidden="true">
   <div class="marquee-track" id="mtrack">
-    <span>1. e4 e5 &nbsp; 2. Nf3 d6 &nbsp; 3. d4 Bg4 &nbsp; 4. dxe5 Bxf3 &nbsp; 5. Qxf3 dxe5 &nbsp; 6. Bc4 Nf6 &nbsp; 7. Qb3 Qe7 &nbsp; 8. Nc3 c6 &nbsp; 9. Bg5 b5 &nbsp; 10. Nxb5 cxb5 &nbsp; 11. Bxb5+ Nbd7 &nbsp; 12. O-O-O Rd8 &nbsp; 13. Rxd7 Rxd7 &nbsp; 14. Rd1 Qe6 &nbsp; 15. Bxd7+ Nxd7 &nbsp; 16. Qb8+ Nxb8 &nbsp; <b>17. Rd8#</b><span class="sep-dot"></span></span>
+    <!-- Filled by the board script with the notation of the game on display. -->
   </div>
 </div>
 
@@ -874,9 +874,31 @@ const GAMES = [
 const board = document.getElementById('board');
 const sanEl = document.getElementById('san');
 const nameEl = document.getElementById('game-name');
-// Start on a random game so repeat visitors get variety, then rotate.
+const trackEl = document.getElementById('mtrack');
+// Start on a random game so repeat visitors get variety; every rotation
+// draws another random game.
 let gameIndex = Math.floor(Math.random() * GAMES.length);
 let pieces, hlFrom, hlTo, ply, timer;
+
+function nextGameIndex() {
+  if (GAMES.length < 2) return gameIndex;
+  let next;
+  do { next = Math.floor(Math.random() * GAMES.length); } while (next === gameIndex);
+  return next;
+}
+
+// Rebuild the notation ribbon from the game on display. The content is
+// doubled so the -50% scroll loops without a visible seam.
+function setMarquee() {
+  const parts = GAMES[gameIndex].moves.map(m => {
+    const black = /^\d+\.\.\./.test(m.san);
+    let text = black ? m.san.replace(/^\d+\.\.\.\s*/, '') : m.san;
+    if (m.mate) text = '<b>' + text + '</b>';
+    return black ? text + ' &nbsp; ' : text + ' ';
+  });
+  const half = '<span>' + parts.join('') + '<span class="sep-dot"></span></span>';
+  trackEl.innerHTML = half + half;
+}
 
 function place(el, sq) {
   const [x, y] = sqXY(sq);
@@ -905,6 +927,7 @@ function setupBoard() {
   ply = 0;
   sanEl.innerHTML = '&nbsp;';
   nameEl.textContent = GAMES[gameIndex].name;
+  setMarquee();
 }
 
 function playPly() {
@@ -913,7 +936,7 @@ function playPly() {
     timer = setTimeout(() => {
       board.style.opacity = '0';
       setTimeout(() => {
-        gameIndex = (gameIndex + 1) % GAMES.length;
+        gameIndex = nextGameIndex();
         setupBoard();
         board.style.opacity = '1';
         timer = setTimeout(playPly, 900);
