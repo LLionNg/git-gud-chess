@@ -4,7 +4,9 @@ import { askPromotion } from './promotion.js';
 // The server is stateless, so the current game lives here and in localStorage.
 const STORAGE_KEY = 'chessbot.game';
 
-// How many takebacks each mode grants for a whole game.
+// Takebacks available at any moment. The allowance refills after every move
+// the player makes, so normal mode can step back one move but never chain
+// undos deeper into the past.
 const UNDO_ALLOWANCE = { practice: Infinity, normal: 1, hell: 0 };
 
 // Orchestrates the game: server state, move flow, premoves, and keeping the
@@ -362,8 +364,10 @@ export class Game {
       }
       this.state = next;
       this.busy = false;
-      // Playing a fresh move abandons whatever the redo stack held.
+      // Playing a fresh move abandons whatever the redo stack held and
+      // refills the mode's takeback allowance (a redo does neither).
       this.redoStack = [];
+      this.undosLeft = UNDO_ALLOWANCE[this.mode];
       this.#store();
       this.board.setPosition(parseFen(next.fen), false);
       this.refresh();
